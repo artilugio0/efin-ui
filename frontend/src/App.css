@@ -1,0 +1,24 @@
+/* Main layout */
+.app-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(27, 38, 54, 1);
+    color: white;
+    overflow: hidden;
+}
+
+.results-area {
+    flex: 1;
+    overflow: hidden;
+    padding: 1.5rem 0.5rem 0 0.5rem;
+}
+
+.content-wrapper {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
