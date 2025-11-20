@@ -2,17 +2,17 @@ import {useState, useEffect} from 'react';
 import logo from './assets/images/logo-universal.png';
 import './App.css';
 import {Mode} from './Modes';
+import {SuggestionInput} from './SuggestionInput';
 import {CommandInputBar} from './CommandInputBar';
 import {GenericTable} from './GenericTable';
 import {RequestResponseDetail} from './RequestResponseDetail';
-import {EvalCommand, RowAction} from "../wailsjs/go/main/App";
+import {EvalCommand, RowAction, SuggestCommand} from "../wailsjs/go/main/App";
 import {main as models} from "../wailsjs/go/models";
 
 function App() {
     const [mode, setMode] = useState<Mode>('normal');
     const [activeView, setActiveView] = useState('start');
     const [commandResult, setCommandResult] = useState<models.CommandResult | null>(null);
-    const [commandInputValue, setCommandInputValue] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleRowAction = async (rowObject: Record<string, string>) => {
@@ -88,11 +88,9 @@ function App() {
             </div>
 
             <CommandInputBar
-                value={commandInputValue}
-                onChange={setCommandInputValue}
                 mode={mode}
-                loading={loading}
                 onSubmit={evalCommand}
+                suggest={SuggestCommand}
             />
         </div>
     )

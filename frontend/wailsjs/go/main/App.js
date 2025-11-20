@@ -6,10 +6,10 @@ export function EvalCommand(arg1) {
   return window['go']['main']['App']['EvalCommand'](arg1);
 }
 
-export function Greet(arg1) {
-  return window['go']['main']['App']['Greet'](arg1);
-}
-
 export function RowAction(arg1) {
   return window['go']['main']['App']['RowAction'](arg1);
+}
+
+export function SuggestCommand(arg1) {
+  return window['go']['main']['App']['SuggestCommand'](arg1);
 }

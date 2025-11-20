@@ -1,65 +1,62 @@
-import { useRef, useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import './CommandInputBar.css';
+import {SuggestionInput} from './SuggestionInput';
 import {Mode} from './Modes';
 
 interface CommandInputBarProps {
-  value: string;
-  onChange: (value: string) => void;
   mode: Mode;
-  loading: boolean;
   onSubmit: (value: string) => void;
+  suggest: (value: string) => Promise<string[]>;
 }
 
 export function CommandInputBar({
-  value,
-  onChange,
   mode,
-  loading,
   onSubmit,
+  suggest,
 }: CommandInputBarProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
-  // Handle Enter key in command mode
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && mode === 'command') {
-      e.preventDefault(); // prevent newline if needed
-      onSubmit(value);
+  const fetchSuggestions = useCallback(async (text: string) => {
+    if (!suggest || text.trim() === '') {
+      setSuggestions([]);
+      setSelectedIndex(-1);
+      return;
     }
-  };
 
-  // Auto-focus the input when switching to command mode
+    try {
+      const results = await suggest(text);
+      const filtered = results.filter(s =>
+        s.toLowerCase().startsWith(text.toLowerCase()) && s !== text
+      );
+      setSuggestions(filtered);
+      setSelectedIndex(filtered.length > 0 ? 0 : -1);
+    } catch (err) {
+      console.error('Suggestion error:', err);
+      setSuggestions([]);
+      setSelectedIndex(-1);
+    }
+  }, [suggest]);
+
+  // Debounced fetch
   useEffect(() => {
-    if (mode === 'command') {
-      const timeoutId = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 0);
-      return () => clearTimeout(timeoutId);
-    } else {
-      inputRef.current?.blur();
-    }
-  }, [mode]);
+    const id = setTimeout(() => fetchSuggestions(value), 100);
+    return () => clearTimeout(id);
+  }, [value, fetchSuggestions]);
+
 
   return (
     <div className="input-bar">
       <div className="content-wrapper">
-        <div className="input-wrapper">
-          <input
-            ref={inputRef}
-            className={`command-input ${mode === 'normal' ? 'mode-normal' : 'mode-command'}`}
-            type="text"
+        <SuggestionInput 
             value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              mode === 'command'
-                ? 'Enter Command...'
-                : "Normal mode — press 'i' to edit"
-            }
+            onChange={setValue}
+            suggestions={suggestions}
+            onSubmit={onSubmit}
             disabled={mode === 'normal'}
-            readOnly={mode === 'normal'}
-          />
-          {loading && <span className="loading-indicator">Running…</span>}
-        </div>
+            focus={mode === 'command'}
+        />
 
         <div className="mode-indicator">
           {mode === 'command' ? 'COMMAND' : 'NORMAL'}

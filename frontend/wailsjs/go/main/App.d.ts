@@ -4,6 +4,6 @@ import {main} from '../models';
 
 export function EvalCommand(arg1:string):Promise<main.CommandResult>;
 
-export function Greet(arg1:string):Promise<string>;
-
 export function RowAction(arg1:Record<string, string>):Promise<main.CommandResult>;
+
+export function SuggestCommand(arg1:string):Promise<Array<string>>;

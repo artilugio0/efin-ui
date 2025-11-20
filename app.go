@@ -11,14 +11,16 @@ import (
 
 // App struct
 type App struct {
-	ctx context.Context
-	db  *sql.DB
+	ctx          context.Context
+	db           *sql.DB
+	histFilePath string
 }
 
 // NewApp creates a new App application struct
-func NewApp(db *sql.DB) *App {
+func NewApp(db *sql.DB, histFilePath string) *App {
 	return &App{
-		db: db,
+		db:           db,
+		histFilePath: histFilePath,
 	}
 }
 
@@ -28,12 +30,20 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
+// SuggestCommand returns a list of command suggestions for the
+// partial command given
+func (a *App) SuggestCommand(cmd string) []string {
+	return []string{
+		"query SELECT COUNT(*) FROM responses",
+		"query SELECT COUNT(*) FROM requests",
+		"query SELECT name, value FROM headers WHERE response_id = 1",
+		"query SELECT name, value FROM headers WHERE request_id = 1",
+		"query SELECT * FROM responses LIMIT 100",
+		"query SELECT * FROM requests LIMIT 100",
+	}
 }
 
-// EvalCommand returns a greeting for the given name
+// EvalCommand evaluates and returns the result of the command given
 func (a *App) EvalCommand(cmd string) CommandResult {
 	fields := strings.Fields(cmd)
 	if len(fields) > 0 && fields[0] == "query" {

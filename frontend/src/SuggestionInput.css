@@ -1,0 +1,55 @@
+.autocomplete-wrapper {
+  position: relative;
+  display: inline-block;
+  font-family: inherit;
+  height: 3rem;
+  width: 100%;
+}
+
+.autocomplete-visual {
+  position: relative;
+  display: inline-block;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 0px;
+  background-color: transparent;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  user-select: none; /* Prevent selection on the visual part */
+  pointer-events: none; /* Let clicks pass through to the hidden input */
+  text-align: left;
+  width: 100%;
+}
+
+.autocomplete-hidden-text {
+  color: #000;
+  font-weight: 500;
+}
+
+.autocomplete-suggestion {
+  color: #888;
+}
+
+/* Hidden input that receives focus and selection */
+.autocomplete-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+
+  height: 100%;
+  padding: 0px 16px;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  color: transparent;
+  outline: none;
+
+  caret-color: black;        /* Shows a visible cursor */
+}
+
+.autocomplete-input:disabled {
+    background-color: rgba(255, 255, 255, 0.6);
+    cursor: not-allowed;
+}

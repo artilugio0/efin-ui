@@ -22,6 +22,11 @@ func main() {
 		dbFile = os.Args[1]
 	}
 
+	histFilePath := "efin.history"
+	if len(os.Args) > 2 {
+		histFilePath = os.Args[2]
+	}
+
 	db, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: could not open DB file: %v", err)
@@ -30,7 +35,7 @@ func main() {
 	defer db.Close()
 
 	// Create an instance of the app structure
-	app := NewApp(db)
+	app := NewApp(db, histFilePath)
 
 	// Create application with options
 	err = wails.Run(&options.App{
