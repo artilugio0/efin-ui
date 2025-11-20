@@ -6,21 +6,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"slices"
 	"strings"
 )
 
 // App struct
 type App struct {
-	ctx          context.Context
-	db           *sql.DB
-	histFilePath string
+	ctx            context.Context
+	db             *sql.DB
+	histFilePath   string
+	commandHistory []string
 }
 
 // NewApp creates a new App application struct
 func NewApp(db *sql.DB, histFilePath string) *App {
 	return &App{
-		db:           db,
-		histFilePath: histFilePath,
+		db:             db,
+		histFilePath:   histFilePath,
+		commandHistory: []string{},
 	}
 }
 
@@ -28,23 +32,35 @@ func NewApp(db *sql.DB, histFilePath string) *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	if err := a.loadHistory(); err != nil {
+		log.Printf("could not read command history: %v", err)
+	}
 }
 
 // SuggestCommand returns a list of command suggestions for the
 // partial command given
 func (a *App) SuggestCommand(cmd string) []string {
-	return []string{
-		"query SELECT COUNT(*) FROM responses",
-		"query SELECT COUNT(*) FROM requests",
-		"query SELECT name, value FROM headers WHERE response_id = 1",
-		"query SELECT name, value FROM headers WHERE request_id = 1",
-		"query SELECT * FROM responses LIMIT 100",
-		"query SELECT * FROM requests LIMIT 100",
+	suggestions := []string{}
+	exists := map[string]bool{}
+
+	for _, histCmd := range a.commandHistory {
+		lc := strings.ToLower(histCmd)
+		if strings.HasPrefix(lc, strings.ToLower(cmd)) && !exists[lc] {
+			suggestions = append(suggestions, histCmd)
+			exists[lc] = true
+		}
 	}
+
+	slices.Reverse(suggestions)
+	return suggestions
 }
 
 // EvalCommand evaluates and returns the result of the command given
 func (a *App) EvalCommand(cmd string) CommandResult {
+	if err := a.updateHistory(cmd); err != nil {
+		log.Printf("could not update history: %v", err)
+	}
+
 	fields := strings.Fields(cmd)
 	if len(fields) > 0 && fields[0] == "query" {
 		rrTable, err := a.runQuery(strings.Join(fields[1:], " "))
@@ -65,6 +81,39 @@ func (a *App) EvalCommand(cmd string) CommandResult {
 		ResultType: "error",
 		Error:      "invalid command",
 	}
+}
+
+// updateHistory adds the given command to the command history
+func (a *App) updateHistory(cmd string) error {
+	f, err := os.OpenFile(a.histFilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := f.Write([]byte(cmd + "\n")); err != nil {
+		return err
+	}
+
+	a.commandHistory = append(a.commandHistory, cmd)
+
+	return nil
+}
+
+// readHistory reads command history from file
+func (a *App) loadHistory() error {
+	fbytes, err := os.ReadFile(a.histFilePath)
+	if err != nil {
+		return err
+	}
+
+	a.commandHistory = []string{}
+	content := string(fbytes)
+	for line := range strings.Lines(content) {
+		a.commandHistory = append(a.commandHistory, strings.TrimRight(line, "\n"))
+	}
+
+	return nil
 }
 
 type CommandResult struct {
