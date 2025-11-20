@@ -1,0 +1,28 @@
+/* SearchableGenericTable.css */
+.searchable-table-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.searchable-table-search-container {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 30;
+}
+
+.searchable-table-result-count {
+  position: absolute;
+  top: 56px;
+  right: 16px;
+  z-index: 30;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}

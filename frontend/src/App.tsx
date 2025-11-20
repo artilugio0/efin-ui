@@ -4,7 +4,7 @@ import './App.css';
 import {Mode} from './Modes';
 import {SuggestionInput} from './SuggestionInput';
 import {CommandInputBar} from './CommandInputBar';
-import {GenericTable} from './GenericTable';
+import {SearchableGenericTable} from './SearchableGenericTable';
 import {RequestResponseDetail} from './RequestResponseDetail';
 import {EvalCommand, RowAction, SuggestCommand} from "../wailsjs/go/main/App";
 import {main as models} from "../wailsjs/go/models";
@@ -55,6 +55,11 @@ function App() {
         }
 
         if (e.key === 'i' && mode === 'normal') {
+          const active = document.activeElement;
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+            return;
+          }
+
           e.preventDefault();
           setMode('command');
         }
@@ -76,7 +81,7 @@ function App() {
                     ) : activeView === 'request_response_detail' && commandResult !== null ? (
                         <RequestResponseDetail data={commandResult.request_response_detail} />
                     ) : activeView === 'request_response_table' ? (
-                        <GenericTable
+                        <SearchableGenericTable
                             headers={commandResult?.request_response_table[0] || []}
                             rows={commandResult?.request_response_table.slice(1) || []}
                             enableKeybindings={mode === 'normal'}

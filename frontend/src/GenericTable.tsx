@@ -1,7 +1,7 @@
 import './GenericTable.css';
 import { useState, useEffect, useRef } from 'react';
 
-interface GenericTableProps {
+export interface GenericTableProps {
   /** Array of column header names */
   headers: string[];
   /** 2D array of row data — rows[i][j] corresponds to column j in row i */
@@ -38,8 +38,13 @@ export function GenericTable({
   useEffect(() => {
     if (!enableKeybindings || totalRows === 0 || totalCols === 0) return;
 
+
     const handleKey = (e: KeyboardEvent) => {
       if (!['h', 'j', 'k', 'l', 'Enter', 'Tab'].includes(e.key)) return;
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+          return;
+        }
       e.preventDefault();
 
       let newRow = selectedRow;
