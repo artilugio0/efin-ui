@@ -38,7 +38,6 @@ export function GenericTable({
   useEffect(() => {
     if (!enableKeybindings || totalRows === 0 || totalCols === 0) return;
 
-
     const handleKey = (e: KeyboardEvent) => {
       if (!['h', 'j', 'k', 'l', 'Enter', 'Tab'].includes(e.key)) return;
         const active = document.activeElement;

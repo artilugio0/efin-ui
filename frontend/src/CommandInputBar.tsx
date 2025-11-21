@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback} from 'react';
 import './CommandInputBar.css';
 import {SuggestionInput} from './SuggestionInput';
 import {Mode} from './Modes';
@@ -55,11 +55,11 @@ export function CommandInputBar({
             suggestions={suggestions}
             onSubmit={onSubmit}
             disabled={mode === 'normal'}
-            focus={mode === 'command'}
+            focus={mode === 'command' || mode === 'search'}
         />
 
         <div className="mode-indicator">
-          {mode === 'command' ? 'COMMAND' : 'NORMAL'}
+          {mode.toUpperCase()}
         </div>
       </div>
     </div>

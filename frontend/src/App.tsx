@@ -13,6 +13,7 @@ function App() {
     const [mode, setMode] = useState<Mode>('normal');
     const [activeView, setActiveView] = useState('start');
     const [commandResult, setCommandResult] = useState<models.CommandResult | null>(null);
+    const [search, setSearch] = useState<string>('');
     const [loading, setLoading] = useState(false);
 
     const handleRowAction = async (rowObject: Record<string, string>) => {
@@ -31,13 +32,11 @@ function App() {
     };
 
     const evalCommand = async (cmd: string) => {
-        if (!cmd.trim()) return;
         setLoading(true);
         try {
             const result = await EvalCommand(cmd);
             setActiveView(result.result_type);
             setCommandResult(result);
-            console.log(JSON.stringify(result));
         } catch (err) {
             console.error(err);
             setCommandResult(null);
@@ -47,11 +46,25 @@ function App() {
         }
     };
 
+    const handleSubmit = (submitted: string) => {
+        if (!submitted.trim()) return;
+        switch (mode) {
+        case 'command':
+            evalCommand(submitted);
+            return;
+        case 'search':
+            setSearch(submitted);
+            setMode('normal');
+            return;
+        }
+    };
+
     useEffect(() => {
       const handler = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           e.preventDefault();
           setMode('normal');
+          setSearch('');
         }
 
         if (e.key === 'i' && mode === 'normal') {
@@ -62,6 +75,16 @@ function App() {
 
           e.preventDefault();
           setMode('command');
+        }
+
+        if (e.key === '/' && mode === 'normal') {
+          const active = document.activeElement;
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+            return;
+          }
+
+          e.preventDefault();
+          setMode('search');
         }
       };
 
@@ -86,6 +109,7 @@ function App() {
                             rows={commandResult?.request_response_table.slice(1) || []}
                             enableKeybindings={mode === 'normal'}
                             onRowAction={handleRowAction}
+                            search={search}
                         />
                     ) : null
                     }
@@ -94,7 +118,7 @@ function App() {
 
             <CommandInputBar
                 mode={mode}
-                onSubmit={evalCommand}
+                onSubmit={handleSubmit}
                 suggest={SuggestCommand}
             />
         </div>

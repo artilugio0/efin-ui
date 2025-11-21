@@ -43,7 +43,7 @@ func (a *App) SuggestCommand(cmd string) []string {
 	suggestions := []string{}
 	exists := map[string]bool{}
 
-	for _, histCmd := range a.commandHistory {
+	for _, histCmd := range slices.Backward(a.commandHistory) {
 		lc := strings.ToLower(histCmd)
 		if strings.HasPrefix(lc, strings.ToLower(cmd)) && !exists[lc] {
 			suggestions = append(suggestions, histCmd)
@@ -51,7 +51,6 @@ func (a *App) SuggestCommand(cmd string) []string {
 		}
 	}
 
-	slices.Reverse(suggestions)
 	return suggestions
 }
 

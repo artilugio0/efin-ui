@@ -32,6 +32,7 @@ export function SuggestionInput({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !disabled) {
       e.preventDefault(); // prevent newline if needed
+      e.stopPropagation()
       onSubmit(value);
       onChange('');
     }

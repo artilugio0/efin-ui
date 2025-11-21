@@ -1,1 +1,1 @@
-export type Mode = 'normal' | 'command';
+export type Mode = 'normal' | 'command' | 'search';
