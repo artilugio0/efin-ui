@@ -19,7 +19,7 @@ export function CommandInputBar({
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
   const fetchSuggestions = useCallback(async (text: string) => {
-    if (!suggest || text.trim() === '') {
+    if (!suggest) {
       setSuggestions([]);
       setSelectedIndex(-1);
       return;

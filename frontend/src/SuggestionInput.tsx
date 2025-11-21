@@ -26,7 +26,16 @@ export function SuggestionInput({
   const validSuggestions = suggestions.filter(s =>
     s.toLowerCase().startsWith(value.toLowerCase()) && s !== value
   );
-  const suggestion = validSuggestions.length > 0 ? validSuggestions[suggestionIndex].slice(value.length) : '';
+
+  let currentIndex = suggestionIndex;
+  if (currentIndex >= validSuggestions.length) {
+      currentIndex = 0;
+      if (suggestionIndex > 0) {
+          setSuggestionIndex(0);
+      }
+  }
+
+  const suggestion = validSuggestions.length > 0 ? validSuggestions[currentIndex].slice(value.length) : '';
 
   // Handle Enter key in command mode
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -52,10 +61,10 @@ export function SuggestionInput({
         setSuggestionIndex(prev => (prev - 1 + validSuggestions.length) % validSuggestions.length);
         return;
       }
-      if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestionIndex >= 0) {
+      if ((e.key === 'Tab' || e.key === 'ArrowRight') && currentIndex >= 0) {
         console.log('suggestion accepted')
         e.preventDefault();
-        onChange(validSuggestions[suggestionIndex]);
+        onChange(validSuggestions[currentIndex]);
         setSuggestionIndex(0);
         return;
       }
