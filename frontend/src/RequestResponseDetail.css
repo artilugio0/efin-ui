@@ -72,3 +72,10 @@
 .panel:hover {
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
+
+/* Highlight style – you can adjust colors as needed */
+.panel-content mark {
+  background-color: #ffff00;
+  padding: 0 2px;
+  font-weight: 600;
+}

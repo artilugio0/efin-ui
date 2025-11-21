@@ -102,7 +102,10 @@ function App() {
                     {loading ? (
                         <div className="loading-placeholder">Loading data...</div>
                     ) : activeView === 'request_response_detail' && commandResult !== null ? (
-                        <RequestResponseDetail data={commandResult.request_response_detail} />
+                        <RequestResponseDetail
+                            data={commandResult.request_response_detail}
+                            search={search}
+                        />
                     ) : activeView === 'request_response_table' ? (
                         <SearchableGenericTable
                             headers={commandResult?.request_response_table[0] || []}
