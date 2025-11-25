@@ -51,6 +51,7 @@ function App() {
         switch (mode) {
         case 'command':
             evalCommand(submitted);
+            setSearch('');
             return;
         case 'search':
             setSearch(submitted);
@@ -63,8 +64,10 @@ function App() {
       const handler = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           e.preventDefault();
+          if (mode == 'normal') {
+              setSearch('');
+          }
           setMode('normal');
-          setSearch('');
         }
 
         if (e.key === 'i' && mode === 'normal') {
