@@ -1,26 +1,76 @@
-html {
-    background-color: rgba(27, 38, 54, 1);
-    text-align: center;
-    color: white;
+/* frontend/src/style.css */
+
+:root {
+  /* Default (Dark) */
+  --bg-primary: rgba(27, 38, 54, 1);
+  --bg-secondary: #1e293b;
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-suggestion: #afafaf;
+  --border: #475569;
+  --panel-bg: #1e293b;
+  --panel-header-request: #16a34a;
+  --panel-header-response: #0ea5e9;
+  --table-header-bg: #334155;
+  --table-row-even: #1e293b;
+  --table-row-odd: #334155;
+  --input-bg: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.3);
+
+  --select-primary-bg: #ccddff;
+  --select-primary-text: #475569;
+  --select-primary-border: #3b82f6;
+
+  --select-secondary-bg: #bfdbfe;
+  --select-secondary-text: #475569;
+  --select-secondary-border: #3b82f6;
 }
 
-body {
-    margin: 0;
-    color: white;
-    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-suggestion: #afafaf;
+  --border: #e2e8f0;
+  --panel-bg: #ffffff;
+  --panel-header-request: #15803d;
+  --panel-header-response: #0284c7;
+  --table-header-bg: #f3f4f6;
+  --table-row-even: #ffffff;
+  --table-row-odd: #f9fafb;
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.3);
+
+  --select-primary-bg: #bfdbfe;
+  --select-primary-text: #475569;
+  --select-primary-border: #3b82f6;
 }
 
-@font-face {
-    font-family: "Nunito";
-    font-style: normal;
-    font-weight: 400;
-    src: local(""),
-    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+html, body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0;
+  height: 100%;
+  font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", ...;
 }
 
-#app {
-    height: 100vh;
-    text-align: center;
+#root, #app {
+  height: 100%;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 1px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.5);
 }

@@ -2,15 +2,14 @@
 .input-bar {
     padding: 1rem 0.5rem;
     backdrop-filter: blur(10px);
+    background: var(--bg-primary);
 }
 
 /* Mode indicator in bottom-right */
 .mode-indicator {
     position: absolute;
     right: 1rem;
-    bottom: 0.5rem;
-    background-color: #1e293b;
-    color: white;
+    bottom: 0.8rem;
     padding: 4px 12px;
     font-size: 0.8rem;
     font-weight: bold;
@@ -20,6 +19,9 @@
     z-index: 100;
     opacity: 0.9;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 /* Make input bar relative for absolute positioning */

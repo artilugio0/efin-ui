@@ -22,12 +22,12 @@
 }
 
 .autocomplete-hidden-text {
-  color: #000;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .autocomplete-suggestion {
-  color: #888;
+  color: var(--text-suggestion);
 }
 
 /* Hidden input that receives focus and selection */
@@ -41,12 +41,12 @@
   height: 100%;
   padding: 0px 16px;
   border: none;
-  background: rgba(255, 255, 255, 0.95);
   font: inherit;
-  color: transparent;
   outline: none;
 
-  caret-color: black;        /* Shows a visible cursor */
+  background: var(--input-bg);
+  caret-color: var(--text-primary);
+  color: transparent;
 }
 
 .autocomplete-input:disabled {

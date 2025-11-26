@@ -16,6 +16,9 @@ function App() {
     const [search, setSearch] = useState<string>('');
     const [loading, setLoading] = useState(false);
 
+    // Add this state
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
     const handleRowAction = async (rowObject: Record<string, string>) => {
         setLoading(true);
         try {
@@ -99,7 +102,7 @@ function App() {
     }, [mode, setMode]);
 
     return (
-        <div className="app-container">
+        <div className="app-container" data-theme={theme}>  {/* ← ADD THIS */}
             <div className="results-area">
                 <div className="content-wrapper">
                     {loading ? (

@@ -3,8 +3,8 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: rgba(27, 38, 54, 1);
-    color: white;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     overflow: hidden;
 }
 

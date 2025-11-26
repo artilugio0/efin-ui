@@ -1,7 +1,7 @@
 .request-response-detail {
     display: flex;
     height: 100%;
-    background: #f1f3f5;
+    background: var(--bg-primary);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
 }
 
@@ -9,7 +9,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: #ffffff;
+    background: var(--panel-bg);
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     margin: 12px 6px;
@@ -26,13 +26,13 @@
     text-transform: uppercase;
     letter-spacing: 0.8px;
     color: white;
-    background: linear-gradient(135deg, #16a34a, #15803d); /* Request = Green */
+    background: var(--panel-header-request);
     border: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .response-panel .panel-header {
-    background: linear-gradient(135deg, #0ea5e9, #0284c7); /* Response = Blue */
+    background: var(--panel-header-response);
 }
 
 .panel-content {
@@ -40,15 +40,16 @@
     margin: 0;
     padding: 20px;
     overflow: auto;
-    background: #fdfdfd;
-    color: #1f2937;
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Monaco, 'Courier New', monospace;
     font-size: 0.925rem;
     line-height: 1.65;
     white-space: pre-wrap;
     word-wrap: break-word;
-    border-top: 1px solid #e2e8f0;
     text-align: left;
+
+    background: var(--panel-bg);
+    color: var(--text-primary);
+    border-top: 1px solid var(--border);
 }
 
 /* Subtle scrollbar styling (WebKit) */

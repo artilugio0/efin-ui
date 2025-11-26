@@ -1,11 +1,11 @@
 /* Table container - STRAIGHT CORNERS */
 .generic-table-container {
     flex: 1;
-    background-color: white;
+    background-color: var(--panel-bg);
     border-radius: 0;
     overflow: hidden;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
     display: flex;
     flex-direction: column;
 }
@@ -26,15 +26,15 @@
 }
 
 .generic-table th {
-    background-color: #f3f4f6;
-    color: #374151;
+    background-color: var(--table-header-bg);
+    color: var(--text-secondary);
     font-weight: 600;
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.05em;
     padding: 12px 16px;
     text-align: left;
-    border-bottom: 2px solid #e5e7eb;
+    border-bottom: 2px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -43,8 +43,8 @@
 .generic-table td {
     padding: 12px 16px;
     font-size: 0.875rem;
-    color: #111827;
-    border-bottom: 1px solid #e5e7eb;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
     max-width: 400px;
     white-space: nowrap;
     overflow: hidden;
@@ -52,11 +52,11 @@
 }
 
 .generic-table tr:hover {
-    background-color: #f1f5f9;
+    background-color: color-mix(in srgb, var(--table-row-even), #000000 8%);
 }
 
-.generic-table-row-even { background-color: #ffffff; }
-.generic-table-row-odd { background-color: #f9fafb; }
+.generic-table-row-even { background-color: var(--table-row-even); }
+.generic-table-row-odd { background-color: var(--table-row-odd); }
 
 /* Hover to show full cell content */
 .generic-table td:hover,
@@ -64,7 +64,6 @@
     overflow: visible;
     white-space: normal;
     word-wrap: break-word;
-    background-color: #f8fafc;
     z-index: 20;
     position: relative;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -72,11 +71,11 @@
 
 /* Row & cell selection */
 tr.row-selected {
-    background-color: #f5f8ff;
+    background-color: color-mix(in srgb, var(--table-row-even), #0000ff 8%);
 }
 
 .generic-table thead tr.row-selected {
-    background-color: #e0e7ff;
+    background-color: color-mix(in srgb, var(--table-row-even), #0000ff 8%);
 }
 
 .table-cell {
@@ -85,16 +84,17 @@ tr.row-selected {
 }
 
 .table-cell.cell-selected {
-    background-color: #dbeafe;
-    outline: 3px solid #3b82f6;
-    outline-offset: -3px;
+    background-color: var(--select-secondary-bg);
+    color: var(--select-secondary-text);
+    outline: 3px solid var(--select-secondary-border);
+    outline-offset: -2px;
     z-index: 40;
-    box-shadow: 0 0 0 1px white inset;
     font-weight: 600;
 }
 
 .generic-table th.cell-selected {
-    background-color: #bfdbfe;
+    background-color: var(--select-bg);
+    color: var(--select-text);
 }
 
 /* Expanded cell (Enter key) */
@@ -102,14 +102,13 @@ tr.row-selected {
     overflow: visible;
     white-space: normal;
     word-wrap: break-word;
-    background-color: #f8fafc;
+    background-color: var(--bg-secondary)
     z-index: 20;
     position: relative;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .table-cell.cell-selected.hover-expand {
-    outline-color: #1d4ed8 !z;
     z-index: 60;
 }
 
