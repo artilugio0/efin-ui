@@ -8,13 +8,64 @@ import {SearchableGenericTable} from './SearchableGenericTable';
 import {RequestResponseDetail} from './RequestResponseDetail';
 import {EvalCommand, RowAction, SuggestCommand} from "../wailsjs/go/main/App";
 import {main as models} from "../wailsjs/go/models";
+import {Pane} from "./Pane";
 
 function App() {
     const [mode, setMode] = useState<Mode>('normal');
-    const [activeView, setActiveView] = useState('start');
-    const [commandResult, setCommandResult] = useState<models.CommandResult | null>(null);
     const [search, setSearch] = useState<string>('');
     const [loading, setLoading] = useState(false);
+
+    const [currentTab, setCurrentTab] = useState<number>(0);
+    const [focusedPane, setFocusedPane] = useState<number[]>([0]);
+
+    const [contents, setContents] = useState<any>([{result_type: 'start'}]);
+    const [tabs, setTabs] = useState([{
+        layout: 'vsplit',
+        panes: [
+            {
+                content: 0,
+                layout: 'single',
+            },
+        ],
+    }]);
+
+    function updateFocusedPaneContent(currentPane: any, focusedPane: number[], newContent: number) {
+        if (focusedPane.length === 1) {
+            currentPane.panes[focusedPane[0]].content = newContent;
+            return;
+        }
+
+        updateFocusedPaneContent(
+            currentPane.panes[focusedPane[0]],
+            focusedPane.slice(1),
+            newContent,
+        );
+    }
+
+    function renderPane(pane: any, focusedPane: number[]) {
+        return (
+            <Pane layout='vsplit'>
+                {pane.panes.map((p: any, i: number) => (
+                    contents[p.content].result_type === 'request_response_detail' ? (
+                        <RequestResponseDetail
+                            data={contents[p.content].request_response_detail}
+                            search={search}
+                        />
+                    ) : contents[p.content].result_type === 'request_response_table' ? (
+                        <SearchableGenericTable
+                            headers={contents[p.content].request_response_table[0] || []}
+                            rows={contents[p.content].request_response_table.slice(1) || []}
+                            enableKeybindings={mode === 'normal' && focusedPane.length === 1 && focusedPane[0] === i}
+                            onRowAction={handleRowAction}
+                            search={search}
+                        />
+                    ) : contents[p.content].result_type === 'start' ? (
+                        <p>Start page</p>
+                    ) : null
+                ))}
+            </Pane>
+        );
+    }
 
     // Add this state
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
@@ -23,11 +74,13 @@ function App() {
         setLoading(true);
         try {
             const result = await RowAction(rowObject);
-            setActiveView(result.result_type);
-            setCommandResult(result);
+            setContents((prev: any[]) => [...prev, result]);
+            setTabs(prev => {
+                updateFocusedPaneContent(prev[currentTab], focusedPane, contents.length)
+                return {...prev};
+            });
         } catch (err) {
             console.error("RowAction failed", err);
-            setCommandResult(null);
         } finally {
             setLoading(false);
             setMode('normal');
@@ -38,11 +91,13 @@ function App() {
         setLoading(true);
         try {
             const result = await EvalCommand(cmd);
-            setActiveView(result.result_type);
-            setCommandResult(result);
+            setContents((prev: any[]) => [...prev, result]);
+            setTabs(prev => {
+                updateFocusedPaneContent(prev[currentTab], focusedPane, contents.length)
+                return {...prev};
+            });
         } catch (err) {
             console.error(err);
-            setCommandResult(null);
         } finally {
             setLoading(false);
             setMode('normal');
@@ -102,27 +157,9 @@ function App() {
     }, [mode, setMode]);
 
     return (
-        <div className="app-container" data-theme={theme}>  {/* ← ADD THIS */}
+        <div className="app-container" data-theme={theme}>
             <div className="results-area">
-                <div className="content-wrapper">
-                    {loading ? (
-                        <div className="loading-placeholder">Loading data...</div>
-                    ) : activeView === 'request_response_detail' && commandResult !== null ? (
-                        <RequestResponseDetail
-                            data={commandResult.request_response_detail}
-                            search={search}
-                        />
-                    ) : activeView === 'request_response_table' ? (
-                        <SearchableGenericTable
-                            headers={commandResult?.request_response_table[0] || []}
-                            rows={commandResult?.request_response_table.slice(1) || []}
-                            enableKeybindings={mode === 'normal'}
-                            onRowAction={handleRowAction}
-                            search={search}
-                        />
-                    ) : null
-                    }
-                </div>
+                {renderPane(tabs[currentTab], focusedPane)}
             </div>
 
             <CommandInputBar
