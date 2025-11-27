@@ -17,6 +17,21 @@ type App struct {
 	db             *sql.DB
 	histFilePath   string
 	commandHistory []string
+
+	uiState          UIState
+	lastContentIndex int
+}
+
+type UIState struct {
+	CurrentTab  int    `json:"current_tab"`
+	Tabs        []Pane `json:"tabs"`
+	FocusedPane []int  `json:"focused_pane"`
+}
+
+type Pane struct {
+	Layout  string `json:"layout"`
+	Panes   []Pane `json:"panes"`
+	Content int    `json:"content"`
 }
 
 // NewApp creates a new App application struct
@@ -25,6 +40,21 @@ func NewApp(db *sql.DB, histFilePath string) *App {
 		db:             db,
 		histFilePath:   histFilePath,
 		commandHistory: []string{},
+		uiState: UIState{
+			FocusedPane: []int{0},
+			CurrentTab:  0,
+			Tabs: []Pane{
+				{
+					Layout: "vsplit",
+					Panes: []Pane{
+						{
+							Layout:  "single",
+							Content: 0,
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -55,7 +85,151 @@ func (a *App) SuggestCommand(cmd string) []string {
 }
 
 // EvalCommand evaluates and returns the result of the command given
-func (a *App) EvalCommand(cmd string) CommandResult {
+func (a *App) EvalUIAction(action UIAction) UIActionResult {
+	switch action.ActionType {
+	case UIActionCommandSubmitted:
+		if *action.CommandSubmitted == "createpane" {
+			return a.EvalUIAction(UIAction{ActionType: UIActionCreatePane})
+		}
+
+		if *action.CommandSubmitted == "deletepane" {
+			return a.EvalUIAction(UIAction{ActionType: UIActionDeletePane})
+		}
+
+		if *action.CommandSubmitted == "focuspaneprev" {
+			return a.EvalUIAction(UIAction{ActionType: UIActionFocusPanePrev})
+		}
+
+		if *action.CommandSubmitted == "focuspanenext" {
+			return a.EvalUIAction(UIAction{ActionType: UIActionFocusPaneNext})
+		}
+
+		return a.evalCommandSubmitted(*action.CommandSubmitted)
+
+	case UIActionRowSubmitted:
+		return a.evalRowSubmitted(*action.RowSubmitted)
+
+	case UIActionCommandSuggestionRequested:
+		suggestions := a.SuggestCommand(*action.CommandSuggestionRequested)
+		return UIActionResult{
+			ResultType:        "command_suggestion",
+			CommandSuggestion: suggestions,
+		}
+
+	case UIActionUIStateRequested:
+		return UIActionResult{
+			ResultType: "ui_state_updated",
+			UIState:    &a.uiState,
+		}
+
+	case UIActionCreatePane:
+		newFocusedPane := a.createPane(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
+		a.uiState.FocusedPane = newFocusedPane
+
+		return UIActionResult{
+			ResultType: "ui_state_updated",
+			UIState:    &a.uiState,
+		}
+
+	case UIActionDeletePane:
+		newFocusedPane := a.deletePane(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
+		a.uiState.FocusedPane = newFocusedPane
+
+		return UIActionResult{
+			ResultType: "ui_state_updated",
+			UIState:    &a.uiState,
+		}
+
+	case UIActionFocusPanePrev:
+		newFocusedPane := a.focusPanePrev(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
+		a.uiState.FocusedPane = newFocusedPane
+
+		return UIActionResult{
+			ResultType: "ui_state_updated",
+			UIState:    &a.uiState,
+		}
+
+	case UIActionFocusPaneNext:
+		newFocusedPane := a.focusPaneNext(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
+		a.uiState.FocusedPane = newFocusedPane
+
+		return UIActionResult{
+			ResultType: "ui_state_updated",
+			UIState:    &a.uiState,
+		}
+	}
+
+	return UIActionResult{
+		ResultType: "error",
+		Error:      "invalid command",
+	}
+}
+
+func (a *App) createPane(pane *Pane, focusedPane []int) []int {
+	if len(focusedPane) == 1 {
+		pane.Panes = append(pane.Panes, Pane{
+			Layout:  "single",
+			Content: a.lastContentIndex,
+		})
+		return []int{len(pane.Panes) - 1}
+	}
+
+	restFocusedPane := a.createPane(&pane.Panes[focusedPane[0]], focusedPane[1:])
+	newFocusedPane := []int{focusedPane[0]}
+	return append(newFocusedPane, restFocusedPane...)
+}
+
+func (a *App) deletePane(pane *Pane, focusedPane []int) []int {
+	if len(focusedPane) == 1 {
+		newPanes := []Pane{}
+		for i, p := range pane.Panes {
+			if i != focusedPane[0] {
+				newPanes = append(newPanes, p)
+			}
+		}
+		pane.Panes = newPanes
+		if len(pane.Panes) == 0 {
+			return []int{}
+		}
+		return []int{0}
+	}
+
+	restFocusedPane := a.deletePane(&pane.Panes[focusedPane[0]], focusedPane[1:])
+	newFocusedPane := []int{focusedPane[0]}
+	return append(newFocusedPane, restFocusedPane...)
+}
+
+func (a *App) focusPaneNext(pane *Pane, focusedPane []int) []int {
+	if len(focusedPane) == 1 {
+		return []int{(focusedPane[0] + 1) % len(pane.Panes)}
+	}
+
+	restFocusedPane := a.focusPaneNext(&pane.Panes[focusedPane[0]], focusedPane[1:])
+	newFocusedPane := []int{focusedPane[0]}
+	return append(newFocusedPane, restFocusedPane...)
+}
+
+func (a *App) focusPanePrev(pane *Pane, focusedPane []int) []int {
+	if len(focusedPane) == 1 {
+		return []int{(focusedPane[0] - 1) % len(pane.Panes)}
+	}
+
+	restFocusedPane := a.focusPanePrev(&pane.Panes[focusedPane[0]], focusedPane[1:])
+	newFocusedPane := []int{focusedPane[0]}
+	return append(newFocusedPane, restFocusedPane...)
+}
+
+func (a *App) updateFocusedPaneContent(pane Pane, focusedPane []int, newContent int) {
+	if len(focusedPane) == 1 {
+		pane.Panes[focusedPane[0]].Content = newContent
+		return
+	}
+
+	a.updateFocusedPaneContent(pane.Panes[focusedPane[0]], focusedPane[1:], newContent)
+}
+
+// EvalCommand evaluates and returns the result of the command given
+func (a *App) evalCommandSubmitted(cmd string) UIActionResult {
 	if err := a.updateHistory(cmd); err != nil {
 		log.Printf("could not update history: %v", err)
 	}
@@ -64,19 +238,23 @@ func (a *App) EvalCommand(cmd string) CommandResult {
 	if len(fields) > 0 && fields[0] == "query" {
 		rrTable, err := a.runQuery(strings.Join(fields[1:], " "))
 		if err != nil {
-			return CommandResult{
+			return UIActionResult{
 				ResultType: "error",
 				Error:      err.Error(),
 			}
 		}
 
-		return CommandResult{
+		a.lastContentIndex++
+		a.updateFocusedPaneContent(a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane, a.lastContentIndex)
+
+		return UIActionResult{
 			ResultType:           "request_response_table",
 			RequestResponseTable: rrTable,
+			UIState:              &a.uiState,
 		}
 	}
 
-	return CommandResult{
+	return UIActionResult{
 		ResultType: "error",
 		Error:      "invalid command",
 	}
@@ -115,12 +293,34 @@ func (a *App) loadHistory() error {
 	return nil
 }
 
-type CommandResult struct {
+type UIActionResult struct {
 	ResultType string `json:"result_type"`
 	Error      string `json:"error"`
 
 	RequestResponseTable  RequestResponseTable  `json:"request_response_table"`
 	RequestResponseDetail RequestResponseDetail `json:"request_response_detail"`
+	CommandSuggestion     []string              `json:"command_suggestion"`
+
+	UIState *UIState `json:"ui_state"`
+}
+
+const (
+	UIActionCommandSubmitted           string = "command_submitted"
+	UIActionRowSubmitted               string = "row_submitted"
+	UIActionCommandSuggestionRequested string = "command_suggestion_requested"
+	UIActionCreatePane                 string = "create_pane"
+	UIActionDeletePane                 string = "delete_pane"
+	UIActionFocusPanePrev              string = "focus_pane_prev"
+	UIActionFocusPaneNext              string = "focus_pane_next"
+	UIActionUIStateRequested           string = "ui_state_requested"
+)
+
+type UIAction struct {
+	ActionType string `json:"action_type"`
+
+	CommandSubmitted           *string            `json:"command_submitted"`
+	RowSubmitted               *map[string]string `json:"row_submitted"`
+	CommandSuggestionRequested *string            `json:"command_suggestion_requested"`
 }
 
 type RequestResponseTable [][]string
@@ -175,17 +375,17 @@ func (a *App) runQuery(query string) (RequestResponseTable, error) {
 }
 
 // RowAction
-func (a *App) RowAction(row map[string]string) CommandResult {
+func (a *App) evalRowSubmitted(row map[string]string) UIActionResult {
 	requestId, ok := row["request_id"]
 	if !ok {
-		return CommandResult{
+		return UIActionResult{
 			ResultType: "empty",
 		}
 	}
 
 	req, err := getRequest(a.db, requestId)
 	if err != nil {
-		return CommandResult{
+		return UIActionResult{
 			ResultType: "error",
 			Error:      err.Error(),
 		}
@@ -193,18 +393,22 @@ func (a *App) RowAction(row map[string]string) CommandResult {
 
 	resp, err := getResponse(a.db, requestId)
 	if err != nil {
-		return CommandResult{
+		return UIActionResult{
 			ResultType: "error",
 			Error:      err.Error(),
 		}
 	}
 
-	return CommandResult{
+	a.lastContentIndex++
+	a.updateFocusedPaneContent(a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane, a.lastContentIndex)
+
+	return UIActionResult{
 		ResultType: "request_response_detail",
 		RequestResponseDetail: RequestResponseDetail{
 			Request:  req,
 			Response: resp,
 		},
+		UIState: &a.uiState,
 	}
 }
 

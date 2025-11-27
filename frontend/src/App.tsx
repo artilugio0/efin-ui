@@ -6,7 +6,7 @@ import {SuggestionInput} from './SuggestionInput';
 import {CommandInputBar} from './CommandInputBar';
 import {SearchableGenericTable} from './SearchableGenericTable';
 import {RequestResponseDetail} from './RequestResponseDetail';
-import {EvalCommand, RowAction, SuggestCommand} from "../wailsjs/go/main/App";
+import {EvalUIAction} from "../wailsjs/go/main/App";
 import {main as models} from "../wailsjs/go/models";
 import {Pane} from "./Pane";
 
@@ -73,7 +73,10 @@ function App() {
     const handleRowAction = async (rowObject: Record<string, string>) => {
         setLoading(true);
         try {
-            const result = await RowAction(rowObject);
+            const result = await EvalUIAction({
+                action_type: "row_submitted",
+                row_submitted: rowObject,
+            });
             setContents((prev: any[]) => [...prev, result]);
             setTabs(prev => {
                 updateFocusedPaneContent(prev[currentTab], focusedPane, contents.length)
@@ -87,15 +90,31 @@ function App() {
         }
     };
 
+    const updateUIState = (uiState: any) => {
+        console.log("before", currentTab, tabs, focusedPane);
+        console.log("after", uiState);
+
+        setCurrentTab(uiState.current_tab);
+        setTabs(uiState.tabs);
+        setFocusedPane(uiState.focused_pane);
+    };
+
     const evalCommand = async (cmd: string) => {
         setLoading(true);
         try {
-            const result = await EvalCommand(cmd);
-            setContents((prev: any[]) => [...prev, result]);
-            setTabs(prev => {
-                updateFocusedPaneContent(prev[currentTab], focusedPane, contents.length)
-                return {...prev};
+            const result = await EvalUIAction({
+                action_type: "command_submitted",
+                command_submitted: cmd,
             });
+
+            if (result.result_type !== "ui_state_updated") {
+                setContents((prev: any[]) => [...prev, result]);
+            }
+
+            if (result.ui_state) {
+                updateUIState(result.ui_state);
+            }
+
         } catch (err) {
             console.error(err);
         } finally {
@@ -117,6 +136,14 @@ function App() {
             return;
         }
     };
+
+    useEffect(() => {
+        EvalUIAction({
+            action_type: "ui_state_requested",
+        }).then(result => {;
+            updateUIState(result.ui_state);
+        });
+    }, []);
 
     useEffect(() => {
       const handler = (e: KeyboardEvent) => {
@@ -165,7 +192,10 @@ function App() {
             <CommandInputBar
                 mode={mode}
                 onSubmit={handleSubmit}
-                suggest={SuggestCommand}
+                suggest={async (cmd: string) => (await EvalUIAction({
+                    action_type: "command_suggestion_requested",
+                    command_suggestion_requested: cmd,
+                })).command_suggestion}
             />
         </div>
     )
