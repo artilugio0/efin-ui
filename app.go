@@ -104,6 +104,14 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 			return a.EvalUIAction(UIAction{ActionType: UIActionFocusPaneNext})
 		}
 
+		if *action.CommandSubmitted == "createtab" {
+			return a.EvalUIAction(UIAction{ActionType: UIActionCreateTab})
+		}
+
+		if *action.CommandSubmitted == "focustabnext" {
+			return a.EvalUIAction(UIAction{ActionType: UIActionFocusTabNext})
+		}
+
 		return a.evalCommandSubmitted(*action.CommandSubmitted)
 
 	case UIActionRowSubmitted:
@@ -132,6 +140,13 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 		}
 
 	case UIActionDeletePane:
+		if len(a.uiState.Tabs[a.uiState.CurrentTab].Panes) <= 1 {
+			return UIActionResult{
+				ResultType: "ui_state_updated",
+				UIState:    &a.uiState,
+			}
+		}
+
 		newFocusedPane := a.deletePane(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
 		a.uiState.FocusedPane = newFocusedPane
 
@@ -152,6 +167,22 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 	case UIActionFocusPaneNext:
 		newFocusedPane := a.focusPaneNext(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
 		a.uiState.FocusedPane = newFocusedPane
+
+		return UIActionResult{
+			ResultType: "ui_state_updated",
+			UIState:    &a.uiState,
+		}
+
+	case UIActionCreateTab:
+		a.createTab()
+
+		return UIActionResult{
+			ResultType: "ui_state_updated",
+			UIState:    &a.uiState,
+		}
+
+	case UIActionFocusTabNext:
+		a.focusTabNext()
 
 		return UIActionResult{
 			ResultType: "ui_state_updated",
@@ -226,6 +257,25 @@ func (a *App) updateFocusedPaneContent(pane Pane, focusedPane []int, newContent 
 	}
 
 	a.updateFocusedPaneContent(pane.Panes[focusedPane[0]], focusedPane[1:], newContent)
+}
+
+func (a *App) createTab() {
+	a.uiState.Tabs = append(a.uiState.Tabs, Pane{
+		Layout: "vsplit",
+		Panes: []Pane{
+			{
+				Layout:  "single",
+				Content: 0,
+			},
+		},
+	})
+
+	a.uiState.CurrentTab = len(a.uiState.Tabs) - 1
+	a.uiState.FocusedPane = []int{0}
+}
+
+func (a *App) focusTabNext() {
+	a.uiState.CurrentTab = (a.uiState.CurrentTab + 1) % len(a.uiState.Tabs)
 }
 
 // EvalCommand evaluates and returns the result of the command given
@@ -312,6 +362,8 @@ const (
 	UIActionDeletePane                 string = "delete_pane"
 	UIActionFocusPanePrev              string = "focus_pane_prev"
 	UIActionFocusPaneNext              string = "focus_pane_next"
+	UIActionCreateTab                  string = "create_tab"
+	UIActionFocusTabNext               string = "focus_tab_next"
 	UIActionUIStateRequested           string = "ui_state_requested"
 )
 
