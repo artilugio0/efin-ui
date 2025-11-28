@@ -17,6 +17,7 @@ type App struct {
 
 	uiState      *UIState
 	luaEvaluator *LuaEvaluator
+	lastResult   *UIActionResult
 }
 
 // NewApp creates a new App application struct
@@ -36,12 +37,16 @@ func NewApp(db *sql.DB, histFilePath string) *App {
 			},
 		},
 	}
+
+	lastResult := UIActionResult{}
+
 	return &App{
-		luaEvaluator:   NewLuaEvaluator(uiState),
+		luaEvaluator:   NewLuaEvaluator(uiState, db, &lastResult),
 		db:             db,
 		histFilePath:   histFilePath,
 		commandHistory: []string{},
 		uiState:        uiState,
+		lastResult:     &lastResult,
 	}
 }
 
@@ -76,12 +81,18 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 	switch action.ActionType {
 	case UIActionCommandSubmitted:
 		if strings.HasPrefix(*action.CommandSubmitted, "lua") {
+			if err := a.updateHistory(*action.CommandSubmitted); err != nil {
+				log.Printf("could not update history: %v", err)
+			}
+
+			*a.lastResult = UIActionResult{
+				ResultType: "ui_state_updated",
+			}
+
 			a.luaEvaluator.Eval(strings.Join(strings.Fields(*action.CommandSubmitted)[1:], " "))
 
-			return UIActionResult{
-				ResultType: "ui_state_updated",
-				UIState:    a.uiState,
-			}
+			a.lastResult.UIState = a.uiState
+			return *a.lastResult
 		}
 
 		return a.evalCommandSubmitted(*action.CommandSubmitted)
@@ -112,30 +123,6 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 
 // EvalCommand evaluates and returns the result of the command given
 func (a *App) evalCommandSubmitted(cmd string) UIActionResult {
-	if err := a.updateHistory(cmd); err != nil {
-		log.Printf("could not update history: %v", err)
-	}
-
-	fields := strings.Fields(cmd)
-	if len(fields) > 0 && fields[0] == "query" {
-		rrTable, err := a.runQuery(strings.Join(fields[1:], " "))
-		if err != nil {
-			return UIActionResult{
-				ResultType: "error",
-				Error:      err.Error(),
-			}
-		}
-
-		a.uiState.IncreaseLastContentIndex()
-		a.uiState.FocusedPaneSetContentToLast()
-
-		return UIActionResult{
-			ResultType:           "request_response_table",
-			RequestResponseTable: rrTable,
-			UIState:              a.uiState,
-		}
-	}
-
 	return UIActionResult{
 		ResultType: "error",
 		Error:      "invalid command",

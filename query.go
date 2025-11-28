@@ -12,8 +12,8 @@ import (
 type RequestResponseTable [][]string
 
 // runQuery runs the given query and returns a table with the results
-func (a *App) runQuery(query string) (RequestResponseTable, error) {
-	rows, err := a.db.QueryContext(context.TODO(), query)
+func runQuery(db *sql.DB, query string) (RequestResponseTable, error) {
+	rows, err := db.QueryContext(context.TODO(), query)
 	if err != nil {
 		log.Printf("error query: %v", err)
 		return nil, err

@@ -62,7 +62,6 @@ export function SuggestionInput({
         return;
       }
       if ((e.key === 'Tab' || e.key === 'ArrowRight') && currentIndex >= 0) {
-        console.log('suggestion accepted')
         e.preventDefault();
         onChange(validSuggestions[currentIndex]);
         setSuggestionIndex(0);

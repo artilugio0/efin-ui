@@ -58,9 +58,6 @@ function App() {
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
     const updateUIState = (uiState: any) => {
-        console.log("before", currentTab, tabs, focusedPane);
-        console.log("after", uiState);
-
         setCurrentTab(uiState.current_tab);
         setTabs(uiState.tabs);
         setFocusedPane(uiState.focused_pane);
