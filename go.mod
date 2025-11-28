@@ -6,6 +6,7 @@ toolchain go1.24.9
 
 require (
 	github.com/wailsapp/wails/v2 v2.11.0
+	github.com/yuin/gopher-lua v1.1.1
 	modernc.org/sqlite v1.40.1
 )
 

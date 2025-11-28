@@ -15,30 +15,33 @@ type App struct {
 	histFilePath   string
 	commandHistory []string
 
-	uiState *UIState
+	uiState      *UIState
+	luaEvaluator *LuaEvaluator
 }
 
 // NewApp creates a new App application struct
 func NewApp(db *sql.DB, histFilePath string) *App {
-	return &App{
-		db:             db,
-		histFilePath:   histFilePath,
-		commandHistory: []string{},
-		uiState: &UIState{
-			FocusedPane: []int{0},
-			CurrentTab:  0,
-			Tabs: []*Pane{
-				{
-					Layout: "vsplit",
-					Panes: []*Pane{
-						{
-							Layout:  "single",
-							Content: 0,
-						},
+	uiState := &UIState{
+		FocusedPane: []int{0},
+		CurrentTab:  0,
+		Tabs: []*Pane{
+			{
+				Layout: "vsplit",
+				Panes: []*Pane{
+					{
+						Layout:  "single",
+						Content: 0,
 					},
 				},
 			},
 		},
+	}
+	return &App{
+		luaEvaluator:   NewLuaEvaluator(uiState),
+		db:             db,
+		histFilePath:   histFilePath,
+		commandHistory: []string{},
+		uiState:        uiState,
 	}
 }
 
@@ -72,28 +75,13 @@ func (a *App) SuggestCommand(cmd string) []string {
 func (a *App) EvalUIAction(action UIAction) UIActionResult {
 	switch action.ActionType {
 	case UIActionCommandSubmitted:
-		if *action.CommandSubmitted == "createpane" {
-			return a.EvalUIAction(UIAction{ActionType: UIActionCreatePane})
-		}
+		if strings.HasPrefix(*action.CommandSubmitted, "lua") {
+			a.luaEvaluator.Eval(strings.Join(strings.Fields(*action.CommandSubmitted)[1:], " "))
 
-		if *action.CommandSubmitted == "deletepane" {
-			return a.EvalUIAction(UIAction{ActionType: UIActionDeletePane})
-		}
-
-		if *action.CommandSubmitted == "focuspaneprev" {
-			return a.EvalUIAction(UIAction{ActionType: UIActionFocusPanePrev})
-		}
-
-		if *action.CommandSubmitted == "focuspanenext" {
-			return a.EvalUIAction(UIAction{ActionType: UIActionFocusPaneNext})
-		}
-
-		if *action.CommandSubmitted == "createtab" {
-			return a.EvalUIAction(UIAction{ActionType: UIActionCreateTab})
-		}
-
-		if *action.CommandSubmitted == "focustabnext" {
-			return a.EvalUIAction(UIAction{ActionType: UIActionFocusTabNext})
+			return UIActionResult{
+				ResultType: "ui_state_updated",
+				UIState:    a.uiState,
+			}
 		}
 
 		return a.evalCommandSubmitted(*action.CommandSubmitted)
@@ -114,53 +102,6 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 			UIState:    a.uiState,
 		}
 
-	case UIActionCreatePane:
-		a.uiState.PaneCreate()
-
-		return UIActionResult{
-			ResultType: "ui_state_updated",
-			UIState:    a.uiState,
-		}
-
-	case UIActionDeletePane:
-		a.uiState.PaneDelete()
-
-		return UIActionResult{
-			ResultType: "ui_state_updated",
-			UIState:    a.uiState,
-		}
-
-	case UIActionFocusPanePrev:
-		a.uiState.PaneFocusPrev()
-
-		return UIActionResult{
-			ResultType: "ui_state_updated",
-			UIState:    a.uiState,
-		}
-
-	case UIActionFocusPaneNext:
-		a.uiState.PaneFocusNext()
-
-		return UIActionResult{
-			ResultType: "ui_state_updated",
-			UIState:    a.uiState,
-		}
-
-	case UIActionCreateTab:
-		a.uiState.TabCreate()
-
-		return UIActionResult{
-			ResultType: "ui_state_updated",
-			UIState:    a.uiState,
-		}
-
-	case UIActionFocusTabNext:
-		a.uiState.TabFocusNext()
-
-		return UIActionResult{
-			ResultType: "ui_state_updated",
-			UIState:    a.uiState,
-		}
 	}
 
 	return UIActionResult{
@@ -186,7 +127,7 @@ func (a *App) evalCommandSubmitted(cmd string) UIActionResult {
 		}
 
 		a.uiState.IncreaseLastContentIndex()
-		a.uiState.FocusedPaneUpdateContentToLast()
+		a.uiState.FocusedPaneSetContentToLast()
 
 		return UIActionResult{
 			ResultType:           "request_response_table",
@@ -216,12 +157,6 @@ const (
 	UIActionCommandSubmitted           string = "command_submitted"
 	UIActionRowSubmitted               string = "row_submitted"
 	UIActionCommandSuggestionRequested string = "command_suggestion_requested"
-	UIActionCreatePane                 string = "create_pane"
-	UIActionDeletePane                 string = "delete_pane"
-	UIActionFocusPanePrev              string = "focus_pane_prev"
-	UIActionFocusPaneNext              string = "focus_pane_next"
-	UIActionCreateTab                  string = "create_tab"
-	UIActionFocusTabNext               string = "focus_tab_next"
 	UIActionUIStateRequested           string = "ui_state_requested"
 )
 
@@ -264,7 +199,7 @@ func (a *App) evalRowSubmitted(row map[string]string) UIActionResult {
 	}
 
 	a.uiState.IncreaseLastContentIndex()
-	a.uiState.FocusedPaneUpdateContentToLast()
+	a.uiState.FocusedPaneSetContentToLast()
 
 	return UIActionResult{
 		ResultType: "request_response_detail",

@@ -29,19 +29,6 @@ function App() {
         ],
     }]);
 
-    function updateFocusedPaneContent(currentPane: any, focusedPane: number[], newContent: number) {
-        if (focusedPane.length === 1) {
-            currentPane.panes[focusedPane[0]].content = newContent;
-            return;
-        }
-
-        updateFocusedPaneContent(
-            currentPane.panes[focusedPane[0]],
-            focusedPane.slice(1),
-            newContent,
-        );
-    }
-
     function renderPane(pane: any, focusedPane: number[]) {
         return (
             <Pane layout='vsplit'>
@@ -70,26 +57,6 @@ function App() {
     // Add this state
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-    const handleRowAction = async (rowObject: Record<string, string>) => {
-        setLoading(true);
-        try {
-            const result = await EvalUIAction({
-                action_type: "row_submitted",
-                row_submitted: rowObject,
-            });
-            setContents((prev: any[]) => [...prev, result]);
-            setTabs(prev => {
-                updateFocusedPaneContent(prev[currentTab], focusedPane, contents.length)
-                return {...prev};
-            });
-        } catch (err) {
-            console.error("RowAction failed", err);
-        } finally {
-            setLoading(false);
-            setMode('normal');
-        }
-    };
-
     const updateUIState = (uiState: any) => {
         console.log("before", currentTab, tabs, focusedPane);
         console.log("after", uiState);
@@ -97,6 +64,29 @@ function App() {
         setCurrentTab(uiState.current_tab);
         setTabs(uiState.tabs);
         setFocusedPane(uiState.focused_pane);
+    };
+
+    const handleRowAction = async (rowObject: Record<string, string>) => {
+        setLoading(true);
+        try {
+            const result = await EvalUIAction({
+                action_type: "row_submitted",
+                row_submitted: rowObject,
+            });
+
+            if (result.result_type !== "ui_state_updated" && result.result_type !== "error") {
+                setContents((prev: any[]) => [...prev, result]);
+            }
+
+            if (result.ui_state) {
+                updateUIState(result.ui_state);
+            }
+        } catch (err) {
+            console.error("RowAction failed", err);
+        } finally {
+            setLoading(false);
+            setMode('normal');
+        }
     };
 
     const evalCommand = async (cmd: string) => {
@@ -107,7 +97,7 @@ function App() {
                 command_submitted: cmd,
             });
 
-            if (result.result_type !== "ui_state_updated") {
+            if (result.result_type !== "ui_state_updated" && result.result_type !== "error") {
                 setContents((prev: any[]) => [...prev, result]);
             }
 

@@ -83,7 +83,7 @@ func (uis *UIState) PaneFocusPrev() {
 
 func (uis *UIState) paneFocusPrev(pane *Pane, focusedPane []int) []int {
 	if len(focusedPane) == 1 {
-		return []int{(focusedPane[0] - 1) % len(pane.Panes)}
+		return []int{(focusedPane[0] + len(pane.Panes) - 1) % len(pane.Panes)}
 	}
 
 	restFocusedPane := uis.paneFocusPrev(pane.Panes[focusedPane[0]], focusedPane[1:])
@@ -91,21 +91,21 @@ func (uis *UIState) paneFocusPrev(pane *Pane, focusedPane []int) []int {
 	return append(newFocusedPane, restFocusedPane...)
 }
 
-func (uis *UIState) FocusedPaneUpdateContent(newContent int) {
-	uis.focusedPaneUpdateContent(uis.Tabs[uis.CurrentTab], uis.FocusedPane, newContent)
+func (uis *UIState) FocusedPaneSetContent(newContent int) {
+	uis.focusedPaneSetContent(uis.Tabs[uis.CurrentTab], uis.FocusedPane, newContent)
 }
 
-func (uis *UIState) FocusedPaneUpdateContentToLast() {
-	uis.focusedPaneUpdateContent(uis.Tabs[uis.CurrentTab], uis.FocusedPane, uis.lastContentIndex)
+func (uis *UIState) FocusedPaneSetContentToLast() {
+	uis.focusedPaneSetContent(uis.Tabs[uis.CurrentTab], uis.FocusedPane, uis.lastContentIndex)
 }
 
-func (uis *UIState) focusedPaneUpdateContent(pane *Pane, focusedPane []int, newContent int) {
+func (uis *UIState) focusedPaneSetContent(pane *Pane, focusedPane []int, newContent int) {
 	if len(focusedPane) == 1 {
 		pane.Panes[focusedPane[0]].Content = newContent
 		return
 	}
 
-	uis.focusedPaneUpdateContent(pane.Panes[focusedPane[0]], focusedPane[1:], newContent)
+	uis.focusedPaneSetContent(pane.Panes[focusedPane[0]], focusedPane[1:], newContent)
 }
 
 func (uis *UIState) TabCreate() {
@@ -125,8 +125,10 @@ func (uis *UIState) TabCreate() {
 
 func (uis *UIState) TabFocusNext() {
 	uis.CurrentTab = (uis.CurrentTab + 1) % len(uis.Tabs)
+	uis.FocusedPane = []int{0}
 }
 
 func (uis *UIState) TabFocusPrev() {
-	uis.CurrentTab = (uis.CurrentTab - 1) % len(uis.Tabs)
+	uis.CurrentTab = (uis.CurrentTab + len(uis.Tabs) - 1) % len(uis.Tabs)
+	uis.FocusedPane = []int{0}
 }
