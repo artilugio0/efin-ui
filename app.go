@@ -18,20 +18,7 @@ type App struct {
 	histFilePath   string
 	commandHistory []string
 
-	uiState          UIState
-	lastContentIndex int
-}
-
-type UIState struct {
-	CurrentTab  int    `json:"current_tab"`
-	Tabs        []Pane `json:"tabs"`
-	FocusedPane []int  `json:"focused_pane"`
-}
-
-type Pane struct {
-	Layout  string `json:"layout"`
-	Panes   []Pane `json:"panes"`
-	Content int    `json:"content"`
+	uiState *UIState
 }
 
 // NewApp creates a new App application struct
@@ -40,13 +27,13 @@ func NewApp(db *sql.DB, histFilePath string) *App {
 		db:             db,
 		histFilePath:   histFilePath,
 		commandHistory: []string{},
-		uiState: UIState{
+		uiState: &UIState{
 			FocusedPane: []int{0},
 			CurrentTab:  0,
-			Tabs: []Pane{
+			Tabs: []*Pane{
 				{
 					Layout: "vsplit",
-					Panes: []Pane{
+					Panes: []*Pane{
 						{
 							Layout:  "single",
 							Content: 0,
@@ -127,66 +114,55 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 	case UIActionUIStateRequested:
 		return UIActionResult{
 			ResultType: "ui_state_updated",
-			UIState:    &a.uiState,
+			UIState:    a.uiState,
 		}
 
 	case UIActionCreatePane:
-		newFocusedPane := a.createPane(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
-		a.uiState.FocusedPane = newFocusedPane
+		a.uiState.PaneCreate()
 
 		return UIActionResult{
 			ResultType: "ui_state_updated",
-			UIState:    &a.uiState,
+			UIState:    a.uiState,
 		}
 
 	case UIActionDeletePane:
-		if len(a.uiState.Tabs[a.uiState.CurrentTab].Panes) <= 1 {
-			return UIActionResult{
-				ResultType: "ui_state_updated",
-				UIState:    &a.uiState,
-			}
-		}
-
-		newFocusedPane := a.deletePane(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
-		a.uiState.FocusedPane = newFocusedPane
+		a.uiState.PaneDelete()
 
 		return UIActionResult{
 			ResultType: "ui_state_updated",
-			UIState:    &a.uiState,
+			UIState:    a.uiState,
 		}
 
 	case UIActionFocusPanePrev:
-		newFocusedPane := a.focusPanePrev(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
-		a.uiState.FocusedPane = newFocusedPane
+		a.uiState.PaneFocusPrev()
 
 		return UIActionResult{
 			ResultType: "ui_state_updated",
-			UIState:    &a.uiState,
+			UIState:    a.uiState,
 		}
 
 	case UIActionFocusPaneNext:
-		newFocusedPane := a.focusPaneNext(&a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane)
-		a.uiState.FocusedPane = newFocusedPane
+		a.uiState.PaneFocusNext()
 
 		return UIActionResult{
 			ResultType: "ui_state_updated",
-			UIState:    &a.uiState,
+			UIState:    a.uiState,
 		}
 
 	case UIActionCreateTab:
-		a.createTab()
+		a.uiState.TabCreate()
 
 		return UIActionResult{
 			ResultType: "ui_state_updated",
-			UIState:    &a.uiState,
+			UIState:    a.uiState,
 		}
 
 	case UIActionFocusTabNext:
-		a.focusTabNext()
+		a.uiState.TabFocusNext()
 
 		return UIActionResult{
 			ResultType: "ui_state_updated",
-			UIState:    &a.uiState,
+			UIState:    a.uiState,
 		}
 	}
 
@@ -194,88 +170,6 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 		ResultType: "error",
 		Error:      "invalid command",
 	}
-}
-
-func (a *App) createPane(pane *Pane, focusedPane []int) []int {
-	if len(focusedPane) == 1 {
-		pane.Panes = append(pane.Panes, Pane{
-			Layout:  "single",
-			Content: a.lastContentIndex,
-		})
-		return []int{len(pane.Panes) - 1}
-	}
-
-	restFocusedPane := a.createPane(&pane.Panes[focusedPane[0]], focusedPane[1:])
-	newFocusedPane := []int{focusedPane[0]}
-	return append(newFocusedPane, restFocusedPane...)
-}
-
-func (a *App) deletePane(pane *Pane, focusedPane []int) []int {
-	if len(focusedPane) == 1 {
-		newPanes := []Pane{}
-		for i, p := range pane.Panes {
-			if i != focusedPane[0] {
-				newPanes = append(newPanes, p)
-			}
-		}
-		pane.Panes = newPanes
-		if len(pane.Panes) == 0 {
-			return []int{}
-		}
-		return []int{0}
-	}
-
-	restFocusedPane := a.deletePane(&pane.Panes[focusedPane[0]], focusedPane[1:])
-	newFocusedPane := []int{focusedPane[0]}
-	return append(newFocusedPane, restFocusedPane...)
-}
-
-func (a *App) focusPaneNext(pane *Pane, focusedPane []int) []int {
-	if len(focusedPane) == 1 {
-		return []int{(focusedPane[0] + 1) % len(pane.Panes)}
-	}
-
-	restFocusedPane := a.focusPaneNext(&pane.Panes[focusedPane[0]], focusedPane[1:])
-	newFocusedPane := []int{focusedPane[0]}
-	return append(newFocusedPane, restFocusedPane...)
-}
-
-func (a *App) focusPanePrev(pane *Pane, focusedPane []int) []int {
-	if len(focusedPane) == 1 {
-		return []int{(focusedPane[0] - 1) % len(pane.Panes)}
-	}
-
-	restFocusedPane := a.focusPanePrev(&pane.Panes[focusedPane[0]], focusedPane[1:])
-	newFocusedPane := []int{focusedPane[0]}
-	return append(newFocusedPane, restFocusedPane...)
-}
-
-func (a *App) updateFocusedPaneContent(pane Pane, focusedPane []int, newContent int) {
-	if len(focusedPane) == 1 {
-		pane.Panes[focusedPane[0]].Content = newContent
-		return
-	}
-
-	a.updateFocusedPaneContent(pane.Panes[focusedPane[0]], focusedPane[1:], newContent)
-}
-
-func (a *App) createTab() {
-	a.uiState.Tabs = append(a.uiState.Tabs, Pane{
-		Layout: "vsplit",
-		Panes: []Pane{
-			{
-				Layout:  "single",
-				Content: 0,
-			},
-		},
-	})
-
-	a.uiState.CurrentTab = len(a.uiState.Tabs) - 1
-	a.uiState.FocusedPane = []int{0}
-}
-
-func (a *App) focusTabNext() {
-	a.uiState.CurrentTab = (a.uiState.CurrentTab + 1) % len(a.uiState.Tabs)
 }
 
 // EvalCommand evaluates and returns the result of the command given
@@ -294,13 +188,13 @@ func (a *App) evalCommandSubmitted(cmd string) UIActionResult {
 			}
 		}
 
-		a.lastContentIndex++
-		a.updateFocusedPaneContent(a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane, a.lastContentIndex)
+		a.uiState.IncreaseLastContentIndex()
+		a.uiState.FocusedPaneUpdateContentToLast()
 
 		return UIActionResult{
 			ResultType:           "request_response_table",
 			RequestResponseTable: rrTable,
-			UIState:              &a.uiState,
+			UIState:              a.uiState,
 		}
 	}
 
@@ -451,8 +345,8 @@ func (a *App) evalRowSubmitted(row map[string]string) UIActionResult {
 		}
 	}
 
-	a.lastContentIndex++
-	a.updateFocusedPaneContent(a.uiState.Tabs[a.uiState.CurrentTab], a.uiState.FocusedPane, a.lastContentIndex)
+	a.uiState.IncreaseLastContentIndex()
+	a.uiState.FocusedPaneUpdateContentToLast()
 
 	return UIActionResult{
 		ResultType: "request_response_detail",
@@ -460,7 +354,7 @@ func (a *App) evalRowSubmitted(row map[string]string) UIActionResult {
 			Request:  req,
 			Response: resp,
 		},
-		UIState: &a.uiState,
+		UIState: a.uiState,
 	}
 }
 
