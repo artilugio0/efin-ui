@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"slices"
 	"strings"
@@ -97,6 +98,18 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 
 		return a.evalCommandSubmitted(*action.CommandSubmitted)
 
+	case UIActionKeyBinding:
+		log.Printf("attempting key binding: %s", *action.KeyBinding)
+		*a.lastResult = UIActionResult{
+			ResultType: "ui_state_updated",
+		}
+
+		evalString := fmt.Sprintf("settings.key_bindings.normal['%s']()", *action.KeyBinding)
+		a.luaEvaluator.Eval(evalString)
+
+		a.lastResult.UIState = a.uiState
+		return *a.lastResult
+
 	case UIActionRowSubmitted:
 		return a.evalRowSubmitted(*action.RowSubmitted)
 
@@ -115,9 +128,10 @@ func (a *App) EvalUIAction(action UIAction) UIActionResult {
 
 	}
 
+	log.Printf("invalid action: %+v", action)
 	return UIActionResult{
 		ResultType: "error",
-		Error:      "invalid command",
+		Error:      "invalid action",
 	}
 }
 
@@ -144,6 +158,7 @@ const (
 	UIActionCommandSubmitted           string = "command_submitted"
 	UIActionRowSubmitted               string = "row_submitted"
 	UIActionCommandSuggestionRequested string = "command_suggestion_requested"
+	UIActionKeyBinding                 string = "key_binding"
 	UIActionUIStateRequested           string = "ui_state_requested"
 )
 
@@ -153,6 +168,7 @@ type UIAction struct {
 	CommandSubmitted           *string            `json:"command_submitted"`
 	RowSubmitted               *map[string]string `json:"row_submitted"`
 	CommandSuggestionRequested *string            `json:"command_suggestion_requested"`
+	KeyBinding                 *string            `json:"key_binding"`
 }
 
 type RequestResponseDetail struct {

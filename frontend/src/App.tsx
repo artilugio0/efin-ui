@@ -29,6 +29,10 @@ function App() {
         ],
     }]);
 
+    const [keyBindings, setKeyBindings] = useState({
+        "normal": ["p"],
+    });
+
     function renderPane(pane: any, focusedPane: number[]) {
         return (
             <Pane layout='vsplit'>
@@ -61,6 +65,7 @@ function App() {
         setCurrentTab(uiState.current_tab);
         setTabs(uiState.tabs);
         setFocusedPane(uiState.focused_pane);
+        setKeyBindings(uiState.key_bindings);
     };
 
     const handleRowAction = async (rowObject: Record<string, string>) => {
@@ -142,6 +147,10 @@ function App() {
           setMode('normal');
         }
 
+        if (mode === 'command') {
+            return;
+        }
+
         if (e.key === 'i' && mode === 'normal') {
           const active = document.activeElement;
           if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
@@ -150,6 +159,7 @@ function App() {
 
           e.preventDefault();
           setMode('command');
+          return;
         }
 
         if (e.key === '/' && mode === 'normal') {
@@ -160,6 +170,27 @@ function App() {
 
           e.preventDefault();
           setMode('search');
+          return;
+        }
+
+        // Default action: trigger key binding
+        const key_pressed = (e.ctrlKey ? "ctrl " : "") + e.key;
+        if (keyBindings[mode].includes(key_pressed)) {
+            console.log("KEY binding pressed:", key_pressed);
+            e.preventDefault();
+
+            EvalUIAction({
+                action_type: "key_binding",
+                key_binding: key_pressed,
+            }).then(result => {
+                if (result.result_type !== "ui_state_updated" && result.result_type !== "error") {
+                    setContents((prev: any[]) => [...prev, result]);
+                }
+
+                if (result.ui_state) {
+                    updateUIState(result.ui_state);
+                }
+            });
         }
       };
 

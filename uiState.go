@@ -1,16 +1,35 @@
 package main
 
 type UIState struct {
-	CurrentTab       int     `json:"current_tab"`
-	Tabs             []*Pane `json:"tabs"`
-	FocusedPane      []int   `json:"focused_pane"`
-	lastContentIndex int     `json:"-"`
+	CurrentTab       int                 `json:"current_tab"`
+	Tabs             []*Pane             `json:"tabs"`
+	FocusedPane      []int               `json:"focused_pane"`
+	KeyBindings      map[string][]string `json:"key_bindings"`
+	lastContentIndex int                 `json:"-"`
 }
 
 type Pane struct {
 	Layout  string  `json:"layout"`
 	Panes   []*Pane `json:"panes"`
 	Content int     `json:"content"`
+}
+
+func NewUIState() *UIState {
+	return &UIState{
+		FocusedPane: []int{0},
+		CurrentTab:  0,
+		Tabs: []*Pane{
+			{
+				Layout: "vsplit",
+				Panes: []*Pane{
+					{
+						Layout:  "single",
+						Content: 0,
+					},
+				},
+			},
+		},
+	}
 }
 
 func (uis *UIState) IncreaseLastContentIndex() {

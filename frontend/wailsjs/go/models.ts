@@ -164,6 +164,7 @@ export namespace main {
 	    command_submitted?: string;
 	    row_submitted?: Record<string, string>;
 	    command_suggestion_requested?: string;
+	    key_binding?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIAction(source);
@@ -175,12 +176,14 @@ export namespace main {
 	        this.command_submitted = source["command_submitted"];
 	        this.row_submitted = source["row_submitted"];
 	        this.command_suggestion_requested = source["command_suggestion_requested"];
+	        this.key_binding = source["key_binding"];
 	    }
 	}
 	export class UIState {
 	    current_tab: number;
 	    tabs: Pane[];
 	    focused_pane: number[];
+	    key_bindings: Record<string, Array<string>>;
 	
 	    static createFrom(source: any = {}) {
 	        return new UIState(source);
@@ -191,6 +194,7 @@ export namespace main {
 	        this.current_tab = source["current_tab"];
 	        this.tabs = this.convertValues(source["tabs"], Pane);
 	        this.focused_pane = source["focused_pane"];
+	        this.key_bindings = source["key_bindings"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
