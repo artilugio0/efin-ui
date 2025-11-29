@@ -31,28 +31,34 @@ function App() {
 
     const [keyBindings, setKeyBindings] = useState({
         "normal": ["p"],
+        "search": ["p"],
+        "command": ["p"],
     });
 
     function renderPane(pane: any, focusedPane: number[]) {
+        const layout = ["vsplit", "hsplit", "single"].includes(pane.layout) ? pane.layout : "vsplit";
+
         return (
-            <Pane layout='vsplit'>
+            <Pane layout={layout}>
                 {pane.panes.map((p: any, i: number) => (
-                    contents[p.content].result_type === 'request_response_detail' ? (
-                        <RequestResponseDetail
-                            data={contents[p.content].request_response_detail}
-                            search={search}
-                        />
-                    ) : contents[p.content].result_type === 'request_response_table' ? (
-                        <SearchableGenericTable
-                            headers={contents[p.content].request_response_table[0] || []}
-                            rows={contents[p.content].request_response_table.slice(1) || []}
-                            enableKeybindings={mode === 'normal' && focusedPane.length === 1 && focusedPane[0] === i}
-                            onRowAction={handleRowAction}
-                            search={search}
-                        />
-                    ) : contents[p.content].result_type === 'start' ? (
-                        <p>Start page</p>
-                    ) : null
+                    <div className={focusedPane.length === 1 && focusedPane[0] === i ? "pane-focused" : "pane-unfocused"}>
+                        {contents[p.content].result_type === 'request_response_detail' ? (
+                            <RequestResponseDetail
+                                data={contents[p.content].request_response_detail}
+                                search={search}
+                            />
+                        ) : contents[p.content].result_type === 'request_response_table' ? (
+                            <SearchableGenericTable
+                                headers={contents[p.content].request_response_table[0] || []}
+                                rows={contents[p.content].request_response_table.slice(1) || []}
+                                enableKeybindings={mode === 'normal' && focusedPane.length === 1 && focusedPane[0] === i}
+                                onRowAction={handleRowAction}
+                                search={search}
+                            />
+                        ) : contents[p.content].result_type === 'start' ? (
+                            <p>Start page</p>
+                        ) : null}
+                    </div>
                 ))}
             </Pane>
         );
@@ -175,8 +181,7 @@ function App() {
 
         // Default action: trigger key binding
         const key_pressed = (e.ctrlKey ? "ctrl " : "") + e.key;
-        if (keyBindings[mode].includes(key_pressed)) {
-            console.log("KEY binding pressed:", key_pressed);
+        if (keyBindings[mode]?.includes(key_pressed)) {
             e.preventDefault();
 
             EvalUIAction({

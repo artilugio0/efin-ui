@@ -1,3 +1,15 @@
+.pane-focused {
+    border-left: 4px solid var(--select-primary-border);
+    height: 99%;
+    width: 99%;
+}
+
+.pane-unfocused {
+    border-left: 4px solid transparent;
+    height: 99%;
+    width: 99%;
+}
+
 .pane-single {
     width: 100%;
     max-width: 100%;
