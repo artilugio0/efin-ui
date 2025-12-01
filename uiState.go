@@ -104,7 +104,16 @@ func (uis *UIState) paneDelete(pane *Pane, focusedPane []int) []int {
 		if len(pane.Panes) == 0 {
 			return []int{}
 		}
-		return []int{max(0, focusedPane[0]-1)}
+
+		newFocusedPane := []int{max(0, focusedPane[0]-1)}
+		p := pane.Panes[newFocusedPane[0]]
+
+		for len(p.Panes) > 0 {
+			newFocusedPane = append(newFocusedPane, 0)
+			p = p.Panes[0]
+		}
+
+		return newFocusedPane
 	}
 
 	restFocusedPane := uis.paneDelete(pane.Panes[focusedPane[0]], focusedPane[1:])
