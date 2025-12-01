@@ -67,22 +67,18 @@ func (a *App) SuggestCommand(cmd string) []string {
 func (a *App) EvalUIAction(action UIAction) UIActionResult {
 	switch action.ActionType {
 	case UIActionCommandSubmitted:
-		if strings.HasPrefix(*action.CommandSubmitted, "lua") {
-			if err := a.updateHistory(*action.CommandSubmitted); err != nil {
-				log.Printf("could not update history: %v", err)
-			}
-
-			*a.lastResult = UIActionResult{
-				ResultType: "ui_state_updated",
-			}
-
-			a.luaEvaluator.Eval(strings.Join(strings.Fields(*action.CommandSubmitted)[1:], " "))
-
-			a.lastResult.UIState = a.uiState
-			return *a.lastResult
+		if err := a.updateHistory(*action.CommandSubmitted); err != nil {
+			log.Printf("could not update history: %v", err)
 		}
 
-		return a.evalCommandSubmitted(*action.CommandSubmitted)
+		*a.lastResult = UIActionResult{
+			ResultType: "ui_state_updated",
+		}
+
+		a.luaEvaluator.Eval(*action.CommandSubmitted)
+
+		a.lastResult.UIState = a.uiState
+		return *a.lastResult
 
 	case UIActionKeyBinding:
 		log.Printf("attempting key binding: %s", *action.KeyBinding)
