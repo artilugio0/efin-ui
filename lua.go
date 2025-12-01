@@ -163,6 +163,14 @@ func setupGlobals(L *lua.LState, uiState *UIState, db *sql.DB, lastResult *UIAct
 		return 0
 	}))
 
+	L.SetGlobal("request_clipboard", L.NewFunction(func(ls *lua.LState) int {
+		requestId := L.ToInt(1)
+
+		CopyRequestToClipboard(db, requestId)
+
+		return 0
+	}))
+
 	settingsTable := L.NewTable()
 	keyBindingsTable := L.NewTable()
 	normalModeTable := L.NewTable()
