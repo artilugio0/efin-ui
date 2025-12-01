@@ -35,31 +35,44 @@ function App() {
         "command": ["p"],
     });
 
-    function renderPane(pane: any, focusedPane: number[]) {
+    function renderPane(pane: any, focusedPane: number[], focused: boolean) {
         const layout = ["vsplit", "hsplit", "single"].includes(pane.layout) ? pane.layout : "vsplit";
 
-        return (
-            <Pane layout={layout}>
-                {pane.panes.map((p: any, i: number) => (
-                    <div className={focusedPane.length === 1 && focusedPane[0] === i ? "pane-focused" : "pane-unfocused"}>
-                        {contents[p.content].result_type === 'request_response_detail' ? (
+        if (pane.layout === "single") {
+            return (
+                <Pane layout={layout} key={pane.id}>
+                    <div className={focused ? "pane-focused" : "pane-unfocused"}>
+                        {contents[pane.content].result_type === 'request_response_detail' ? (
                             <RequestResponseDetail
-                                data={contents[p.content].request_response_detail}
+                                data={contents[pane.content].request_response_detail}
                                 search={search}
                             />
-                        ) : contents[p.content].result_type === 'request_response_table' ? (
+                        ) : contents[pane.content].result_type === 'request_response_table' ? (
                             <SearchableGenericTable
-                                headers={contents[p.content].request_response_table[0] || []}
-                                rows={contents[p.content].request_response_table.slice(1) || []}
-                                enableKeybindings={mode === 'normal' && focusedPane.length === 1 && focusedPane[0] === i}
+                                headers={contents[pane.content].request_response_table[0] || []}
+                                rows={contents[pane.content].request_response_table.slice(1) || []}
+                                enableKeybindings={mode === 'normal' && focused}
                                 onRowAction={handleRowAction}
                                 search={search}
                             />
-                        ) : contents[p.content].result_type === 'start' ? (
+                        ) : contents[pane.content].result_type === 'start' ? (
                             <p>Start page</p>
                         ) : null}
                     </div>
-                ))}
+                </Pane>
+            );
+        }
+
+        return (
+            <Pane layout={layout}>
+                {pane.panes.map((p: any, i: number) => renderPane(
+                        p,
+                        focusedPane.length > 0 && focusedPane[0] === i
+                            ? focusedPane.slice(1)
+                            : [],
+                        focusedPane.length === 1 && focusedPane[0] === i,
+                    )
+                )}
             </Pane>
         );
     }
@@ -204,12 +217,12 @@ function App() {
       return () => {
         window.removeEventListener('keydown', handler);
       };
-    }, [mode, setMode]);
+    }, [mode, setMode, keyBindings]);
 
     return (
         <div className="app-container" data-theme={theme}>
             <div className="results-area">
-                {renderPane(tabs[currentTab], focusedPane)}
+                {renderPane(tabs[currentTab], focusedPane, false)}
             </div>
 
             <CommandInputBar

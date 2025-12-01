@@ -57,6 +57,30 @@ func setupGlobals(L *lua.LState, uiState *UIState, db *sql.DB, lastResult *UIAct
 		return 0
 	}))
 
+	paneVSplitFunc := L.NewFunction(func(ls *lua.LState) int {
+		uiState.PaneVSplit()
+		return 0
+	})
+	L.SetGlobal("pane_vsplit", paneVSplitFunc)
+
+	paneHSplitFunc := L.NewFunction(func(ls *lua.LState) int {
+		uiState.PaneHSplit()
+		return 0
+	})
+	L.SetGlobal("pane_hsplit", paneHSplitFunc)
+
+	layoutVSplitFunc := L.NewFunction(func(ls *lua.LState) int {
+		uiState.LayoutVSplit()
+		return 0
+	})
+	L.SetGlobal("layout_vsplit", layoutVSplitFunc)
+
+	layoutHSplitFunc := L.NewFunction(func(ls *lua.LState) int {
+		uiState.LayoutHSplit()
+		return 0
+	})
+	L.SetGlobal("layout_hsplit", layoutHSplitFunc)
+
 	tabCreateFunc := L.NewFunction(func(ls *lua.LState) int {
 		uiState.TabCreate()
 		return 0
@@ -149,6 +173,11 @@ func setupGlobals(L *lua.LState, uiState *UIState, db *sql.DB, lastResult *UIAct
 	L.SetField(normalModeTable, "ctrl p", paneCreateFunc)
 	L.SetField(normalModeTable, "ctrl l", paneFocusNextFunc)
 	L.SetField(normalModeTable, "ctrl h", paneFocusPrevFunc)
+	L.SetField(normalModeTable, "ctrl v", paneVSplitFunc)
+	L.SetField(normalModeTable, "ctrl b", paneHSplitFunc)
+
+	L.SetField(normalModeTable, "ctrl ;", layoutHSplitFunc)
+	L.SetField(normalModeTable, "ctrl g", layoutVSplitFunc)
 
 	L.SetGlobal("settings", settingsTable)
 

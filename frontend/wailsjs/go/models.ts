@@ -18,6 +18,7 @@ export namespace main {
 	    layout: string;
 	    panes: Pane[];
 	    content: number;
+	    id: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Pane(source);
@@ -28,6 +29,7 @@ export namespace main {
 	        this.layout = source["layout"];
 	        this.panes = this.convertValues(source["panes"], Pane);
 	        this.content = source["content"];
+	        this.id = source["id"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

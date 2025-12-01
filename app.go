@@ -23,21 +23,7 @@ type App struct {
 
 // NewApp creates a new App application struct
 func NewApp(db *sql.DB, histFilePath string) *App {
-	uiState := &UIState{
-		FocusedPane: []int{0},
-		CurrentTab:  0,
-		Tabs: []*Pane{
-			{
-				Layout: "vsplit",
-				Panes: []*Pane{
-					{
-						Layout:  "single",
-						Content: 0,
-					},
-				},
-			},
-		},
-	}
+	uiState := NewUIState()
 
 	lastResult := UIActionResult{}
 
