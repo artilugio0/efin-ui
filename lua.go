@@ -14,11 +14,14 @@ type LuaEvaluator struct {
 	uiState *UIState
 }
 
-func NewLuaEvaluator(uiState *UIState, db *sql.DB, lastResult *UIActionResult) *LuaEvaluator {
+func NewLuaEvaluator(uiState *UIState, db *sql.DB, lastResult *UIActionResult, settingsScript string) *LuaEvaluator {
 	L := lua.NewState()
 	L.OpenLibs()
 
 	setupGlobals(L, uiState, db, lastResult)
+	if err := L.DoString(settingsScript); err != nil {
+		log.Printf("ERROR: evaluation of settings script failed: %v", err)
+	}
 
 	return &LuaEvaluator{
 		l:       L,
@@ -171,6 +174,7 @@ func setupGlobals(L *lua.LState, uiState *UIState, db *sql.DB, lastResult *UIAct
 	L.SetField(normalModeTable, "ctrl H", tabFocusPrevFunc)
 
 	L.SetField(normalModeTable, "ctrl p", paneCreateFunc)
+	L.SetField(normalModeTable, "ctrl d", paneDeleteFunc)
 	L.SetField(normalModeTable, "ctrl l", paneFocusNextFunc)
 	L.SetField(normalModeTable, "ctrl h", paneFocusPrevFunc)
 	L.SetField(normalModeTable, "ctrl v", paneVSplitFunc)

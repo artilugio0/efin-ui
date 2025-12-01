@@ -22,13 +22,13 @@ type App struct {
 }
 
 // NewApp creates a new App application struct
-func NewApp(db *sql.DB, histFilePath string) *App {
+func NewApp(db *sql.DB, histFilePath string, settingsScript string) *App {
 	uiState := NewUIState()
 
 	lastResult := UIActionResult{}
 
 	return &App{
-		luaEvaluator:   NewLuaEvaluator(uiState, db, &lastResult),
+		luaEvaluator:   NewLuaEvaluator(uiState, db, &lastResult, settingsScript),
 		db:             db,
 		histFilePath:   histFilePath,
 		commandHistory: []string{},

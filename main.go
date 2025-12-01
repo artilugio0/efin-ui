@@ -34,8 +34,18 @@ func main() {
 	}
 	defer db.Close()
 
+	settingsScriptPath := "efin-settings.lua"
+	if len(os.Args) > 3 {
+		settingsScriptPath = os.Args[2]
+	}
+	settingsScript := ""
+	settingsScriptBytes, err := os.ReadFile(settingsScriptPath)
+	if err == nil {
+		settingsScript = string(settingsScriptBytes)
+	}
+
 	// Create an instance of the app structure
-	app := NewApp(db, histFilePath)
+	app := NewApp(db, histFilePath, settingsScript)
 
 	// Create application with options
 	err = wails.Run(&options.App{
