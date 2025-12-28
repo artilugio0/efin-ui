@@ -165,6 +165,10 @@ func (a *App) TabCreate() {
 		a.focusedObject = o
 	}
 
+	if a.search != "" {
+		tab.Search(a.search, false)
+	}
+
 	a.tabs = append(a.tabs, tab)
 	a.tabSwitch(len(a.tabs) - 1)
 
