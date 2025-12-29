@@ -9,6 +9,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+const (
+	TableMessageCopyRow = "table_copy_row"
+)
+
 type Table struct {
 	widget.BaseWidget
 
@@ -25,6 +29,8 @@ type Table struct {
 	searchResultsIndex int
 
 	searchResultsBox *SearchResultsCountBox
+
+	keyBindings *KeyBindings
 
 	OnSubmit func([]string)
 }
@@ -214,5 +220,43 @@ func (t *Table) updateSelectedRow() {
 func (t *Table) Submit() {
 	if t.OnSubmit != nil {
 		t.OnSubmit(t.rows[t.selectedRow])
+	}
+}
+
+func (t *Table) SetKeyBindings(kbs *KeyBindings) {
+	t.keyBindings = kbs
+}
+
+func (t *Table) WidgetName() string {
+	return "table"
+}
+
+func (t *Table) TypedKey(ev *fyne.KeyEvent) {
+	if ok := t.keyBindings.OnTypedKey(ev); ok {
+		return
+	}
+
+	t.table.TypedKey(ev)
+}
+
+func (t *Table) TypedRune(rune) {
+}
+
+func (t *Table) TypedShortcut(sc fyne.Shortcut) {
+	if ok := t.keyBindings.OnTypedShortcut(sc); ok {
+		return
+	}
+}
+
+func (t *Table) MessageHandle(m Message) {
+	messageStr, ok := m.(string)
+	if !ok || len(t.rows) == 0 {
+		return
+	}
+
+	switch messageStr {
+	case "table_copy_row":
+		rowStr := strings.Join(t.rows[t.selectedRow], "\t")
+		copyToClipboard(rowStr)
 	}
 }

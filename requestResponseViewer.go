@@ -1,15 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"text/template"
 	"unicode"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/artilugio0/efin-ui/templates"
+)
+
+const (
+	RequestResponseViewerMessageCopyRequestScript = "request_response_viewer_copy_request_script"
+	RequestResponseViewerMessageCopyRequest       = "request_response_viewer_copy_request"
+	RequestResponseViewerMessageCopyResponse      = "request_response_viewer_copy_response"
 )
 
 // RequestResponseViewer displays a Request and Response side-by-side in a clean, read-only view
@@ -26,6 +36,8 @@ type RequestResponseViewer struct {
 	leftSearchResultsIndex  int
 	rightSearchResults      []int
 	rightSearchResultsIndex int
+
+	keyBindings *KeyBindings
 
 	leftList  *widget.List
 	rightList *widget.List
@@ -110,8 +122,8 @@ func (v *RequestResponseViewer) updateContent() {
 			reqLines = append(reqLines, fmt.Sprintf("%s: %s", h.Name, h.Value))
 		}
 
-		if v.request.Body != "" {
-			reqLines = append(reqLines, "", replaceUnprintableHex(v.request.Body))
+		if len(v.request.Body) > 0 {
+			reqLines = append(reqLines, "", replaceUnprintableHex(string(v.request.Body)))
 		} else {
 			reqLines = append(reqLines, "")
 		}
@@ -132,8 +144,8 @@ func (v *RequestResponseViewer) updateContent() {
 			respLines = append(respLines, fmt.Sprintf("%s: %s", h.Name, h.Value))
 		}
 
-		if v.response.Body != "" {
-			respLines = append(respLines, "", replaceUnprintableHex(v.response.Body))
+		if len(v.response.Body) > 0 {
+			respLines = append(respLines, "", replaceUnprintableHex(string(v.response.Body)))
 		} else {
 			respLines = append(respLines, "")
 		}
@@ -303,64 +315,6 @@ func (v *RequestResponseViewer) SearchNext() {
 	v.updateSearchResultsBox()
 }
 
-/*
-	func (v *RequestResponseViewer) Update(ev any) {
-		switch ev := ev.(type) {
-		case EventSearchResult:
-
-			if v.rightSelected {
-				lenRight := len(v.rightSearchResults)
-				if lenRight == 0 {
-					break
-				}
-
-				switch ev {
-				case EventSearchResultNext:
-					v.rightSearchResultsIndex = (v.rightSearchResultsIndex + 1) % lenRight
-
-				case EventSearchResultPrev:
-					v.rightSearchResultsIndex = (v.rightSearchResultsIndex - 1 + lenRight) % lenRight
-				}
-			} else {
-				lenLeft := len(v.leftSearchResults)
-				if lenLeft == 0 {
-					break
-				}
-
-				switch ev {
-				case EventSearchResultNext:
-					v.leftSearchResultsIndex = (v.leftSearchResultsIndex + 1) % lenLeft
-
-				case EventSearchResultPrev:
-					v.leftSearchResultsIndex = (v.leftSearchResultsIndex - 1 + lenLeft) % lenLeft
-				}
-			}
-
-			v.updateSearchResultsBox()
-
-		case EventMovement:
-			if ev == EventMovementLeft && v.rightSelected {
-				fyne.Do(func() {
-					v.rightSelected = false
-					v.reqLabel.TextStyle = fyne.TextStyle{Bold: true}
-					v.respLabel.TextStyle = fyne.TextStyle{Bold: false}
-					v.reqLabel.Refresh()
-					v.respLabel.Refresh()
-				})
-			}
-
-			if ev == EventMovementRight && !v.rightSelected {
-				fyne.Do(func() {
-					v.rightSelected = true
-					v.reqLabel.TextStyle = fyne.TextStyle{Bold: false}
-					v.respLabel.TextStyle = fyne.TextStyle{Bold: true}
-					v.reqLabel.Refresh()
-					v.respLabel.Refresh()
-				})
-			}
-		}
-	}
-*/
 func (v *RequestResponseViewer) MoveUp() {
 }
 
@@ -397,3 +351,71 @@ func (v *RequestResponseViewer) updateSearchResultsBox() {
 	}
 	v.rightSearchResultsBox.ShowResults(v.rightSearchResultsIndex+1, len(v.rightSearchResults))
 }
+
+func (v *RequestResponseViewer) SetKeyBindings(kbs *KeyBindings) {
+	v.keyBindings = kbs
+}
+
+func (v *RequestResponseViewer) WidgetName() string {
+	return "request_response_viewer"
+}
+
+func (v *RequestResponseViewer) TypedKey(ev *fyne.KeyEvent) {
+	if ok := v.keyBindings.OnTypedKey(ev); ok {
+		return
+	}
+}
+
+func (v *RequestResponseViewer) TypedRune(rune) {
+}
+
+func (v *RequestResponseViewer) TypedShortcut(sc fyne.Shortcut) {
+	if ok := v.keyBindings.OnTypedShortcut(sc); ok {
+		return
+	}
+}
+
+func (v *RequestResponseViewer) MessageHandle(m Message) {
+	messageStr, ok := m.(string)
+	if !ok {
+		return
+	}
+
+	switch messageStr {
+	case RequestResponseViewerMessageCopyRequestScript:
+		funcs := map[string]any{
+			"contains": strings.Contains,
+			"contains_bytes": func(s []byte, c string) bool {
+				return bytes.Contains(s, []byte(c))
+			},
+		}
+
+		scriptTpl := templates.GetRequestTestifierScript()
+		t, err := template.New("make_request").Funcs(funcs).Parse(scriptTpl)
+		if err != nil {
+			log.Printf("could not copy request script: %v", err)
+		}
+
+		f := &strings.Builder{}
+
+		if err := t.Execute(f, v.request); err != nil {
+			log.Printf("could execute request script template: %v", err)
+		}
+
+		if err := copyToClipboard(f.String()); err != nil {
+			log.Printf("could not copy request script to clipboard: %v", err)
+		}
+
+	case RequestResponseViewerMessageCopyRequest:
+		reqBytes := v.request.Raw()
+		copyToClipboard(string(reqBytes))
+
+	case RequestResponseViewerMessageCopyResponse:
+		respBytes := v.response.Raw()
+		copyToClipboard(string(respBytes))
+	}
+}
+
+func (v *RequestResponseViewer) FocusGained() {}
+
+func (v *RequestResponseViewer) FocusLost() {}

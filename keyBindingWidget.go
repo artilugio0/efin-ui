@@ -65,7 +65,6 @@ func (kbs *KeyBindings) OnTypedShortcut(sc fyne.Shortcut) bool {
 			kbs.onKeyBinding(kb)
 			return true
 		}
-
 	}
 
 	return false

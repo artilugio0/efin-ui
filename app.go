@@ -28,7 +28,7 @@ type App struct {
 
 	mode Mode
 
-	keyBindings map[Mode][]string
+	keyBindings map[string][]string
 
 	search string
 
@@ -78,7 +78,7 @@ func NewApp(db *sql.DB, histFilePath, settingsScript string) *App {
 		commandEntry,
 		nil,
 		nil,
-		nil,
+		widget.NewLabel("placeholder"),
 	)
 
 	fyneApp := app.New()
@@ -121,7 +121,11 @@ func (a *App) SetMode(mode Mode) {
 	a.applyKeyBindings(mode)
 
 	if mode == ModeNormal {
-		a.window.Canvas().Focus(nil)
+		if f, ok := a.focusedObject.(fyne.Focusable); ok {
+			a.window.Canvas().Focus(f)
+		} else {
+			a.window.Canvas().Focus(nil)
+		}
 	} else {
 		a.window.Canvas().Focus(a.commandEntry)
 	}
@@ -163,6 +167,14 @@ func (a *App) TabCreate() {
 	tab := NewMultiSplit()
 	tab.OnFocusMove = func(o fyne.CanvasObject) {
 		a.focusedObject = o
+
+		a.applyKeyBindingsToFocusedObject(a.mode)
+
+		if f, ok := a.focusedObject.(fyne.Focusable); ok {
+			a.window.Canvas().Focus(f)
+		} else {
+			a.window.Canvas().Focus(nil)
+		}
 	}
 
 	if a.search != "" {
@@ -336,6 +348,12 @@ func (a *App) RunQuery(query string) error {
 	a.tabs[a.currentTabIndex].SetCurrentPane(resultsTable)
 
 	return nil
+}
+
+func (a *App) MessageSend(message Message) {
+	if mh, ok := a.focusedObject.(MessageHandler); ok {
+		mh.MessageHandle(message)
+	}
 }
 
 func (a *App) initializeLuaState() {
@@ -513,6 +531,20 @@ func (a *App) initializeLuaState() {
 	})
 	a.l.SetGlobal("search_clear", searchClearFunc)
 
+	messageSendFunc := a.l.NewFunction(func(ls *lua.LState) int {
+		message := a.l.ToString(1)
+		a.MessageSend(message)
+		return 0
+	})
+	a.l.SetGlobal("message_send", messageSendFunc)
+
+	messageSend := func(message string) *lua.LFunction {
+		return a.l.NewFunction(func(ls *lua.LState) int {
+			a.MessageSend(message)
+			return 0
+		})
+	}
+
 	settingsTable := a.l.NewTable()
 	keyBindingsTable := a.l.NewTable()
 	normalModeTable := a.l.NewTable()
@@ -557,6 +589,16 @@ func (a *App) initializeLuaState() {
 
 	a.l.SetField(normalModeTable, "enter", submitFunc)
 	a.l.SetField(normalModeTable, "return", submitFunc)
+
+	tableTable := a.l.NewTable()
+	a.l.SetField(keyBindingsTable, "table", tableTable)
+	a.l.SetField(tableTable, "c", messageSend(TableMessageCopyRow))
+
+	requestResponseViewerTable := a.l.NewTable()
+	a.l.SetField(keyBindingsTable, "request_response_viewer", requestResponseViewerTable)
+	a.l.SetField(requestResponseViewerTable, "c", messageSend(RequestResponseViewerMessageCopyRequest))
+	a.l.SetField(requestResponseViewerTable, "s", messageSend(RequestResponseViewerMessageCopyRequestScript))
+	a.l.SetField(requestResponseViewerTable, "r", messageSend(RequestResponseViewerMessageCopyResponse))
 
 	a.l.SetGlobal("settings", settingsTable)
 
@@ -636,7 +678,7 @@ func (a *App) loadKeyBindingsDefinitions() {
 	}
 
 	var err error
-	keyBindings := map[Mode][]string{}
+	keyBindings := map[string][]string{}
 
 	keyBindingsTable.ForEach(func(k lua.LValue, v lua.LValue) {
 		if err != nil {
@@ -649,18 +691,7 @@ func (a *App) loadKeyBindingsDefinitions() {
 			log.Printf(err.Error())
 			return
 		}
-		var mode Mode
-		switch modeLS.String() {
-		case "normal":
-			mode = ModeNormal
-		case "command":
-			mode = ModeCommand
-		case "search":
-			mode = ModeSearch
-		default:
-			err = fmt.Errorf("invalid mode name found in key_bindings table: %+v", k)
-			return
-		}
+		mode := modeLS.String()
 
 		modeKeyBindingsTable, ok := v.(*lua.LTable)
 		if !ok {
@@ -715,8 +746,26 @@ func (a *App) executeKeyBinding(kb string) {
 
 	kbFunc, ok := kbModeTable.RawGet(lua.LString(kb)).(*lua.LFunction)
 	if !ok {
-		log.Printf("key binding not found: %s %s", a.mode, kb)
-		return
+		// Check if there is a key binding specific for the widget
+		kbWidget, ok := a.focusedObject.(KeyBinder)
+		if !ok {
+			log.Printf("key binding not found: %s %s", a.mode, kb)
+			return
+		}
+
+		kbModeTable, ok := keyBindingsTable.RawGet(lua.LString(kbWidget.WidgetName())).(*lua.LTable)
+		if !ok {
+			log.Printf("key binding table not available for mode %s or widget %s", a.mode, kbWidget.WidgetName())
+			return
+		}
+
+		kbWidgetFunc, ok := kbModeTable.RawGet(lua.LString(kb)).(*lua.LFunction)
+		if !ok {
+			log.Printf("key binding not found: %s %s", a.mode, kb)
+			return
+		}
+
+		kbFunc = kbWidgetFunc
 	}
 
 	if err := a.l.CallByParam(lua.P{
@@ -732,7 +781,7 @@ func (a *App) executeKeyBinding(kb string) {
 func (a *App) configureCanvasKeyBindings(mode Mode) {
 	// Remove current shortcuts
 	for _, mode := range []Mode{ModeNormal, ModeCommand, ModeSearch} {
-		for _, kb := range a.keyBindings[mode] {
+		for _, kb := range a.keyBindings[mode.String()] {
 			var mod fyne.KeyModifier
 			keys := strings.Fields(strings.ToLower(kb))
 			for _, k := range keys {
@@ -758,7 +807,7 @@ func (a *App) configureCanvasKeyBindings(mode Mode) {
 	// configure new shortcuts
 	singleKeyKeyBindings := map[string]bool{}
 OUTER:
-	for _, kb := range a.keyBindings[mode] {
+	for _, kb := range a.keyBindings[mode.String()] {
 		var mod fyne.KeyModifier
 		keys := strings.Fields(strings.ToLower(kb))
 
@@ -799,12 +848,30 @@ OUTER:
 }
 
 func (a *App) applyKeyBindings(mode Mode) {
-	if kbs, ok := a.keyBindings[mode]; ok {
+	activeKeyBindings := a.keyBindings[mode.String()]
+
+	if len(activeKeyBindings) > 0 {
 		a.commandEntry.SetKeyBindings(NewKeyBindings(
-			kbs,
+			activeKeyBindings,
 			a.executeKeyBinding,
 		))
 	}
 
+	a.applyKeyBindingsToFocusedObject(mode)
+
 	a.configureCanvasKeyBindings(mode)
+}
+
+func (a *App) applyKeyBindingsToFocusedObject(mode Mode) {
+	activeKeyBindings := a.keyBindings[mode.String()]
+	if widg, ok := a.focusedObject.(KeyBinder); ok {
+		if kbs, ok := a.keyBindings[widg.WidgetName()]; ok {
+			activeKeyBindings = append(activeKeyBindings, kbs...)
+		}
+
+		widg.SetKeyBindings(NewKeyBindings(
+			activeKeyBindings,
+			a.executeKeyBinding,
+		))
+	}
 }

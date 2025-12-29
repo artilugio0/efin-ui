@@ -1,5 +1,7 @@
 package main
 
+import "fyne.io/fyne/v2"
+
 type Searcher interface {
 	Search(string, bool)
 	SearchNext()
@@ -16,4 +18,17 @@ type Mover interface {
 
 type Submitter interface {
 	Submit()
+}
+
+type KeyBinder interface {
+	fyne.Focusable
+
+	SetKeyBindings(kbs *KeyBindings)
+	WidgetName() string
+}
+
+type Message = any
+
+type MessageHandler interface {
+	MessageHandle(Message)
 }

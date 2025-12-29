@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -63,7 +66,7 @@ func runQuery(db *sql.DB, query string) (QueryResult, error) {
 type Request struct {
 	ID string `json:"id"`
 
-	Body      string `json:"body"`
+	Body      []byte `json:"body"`
 	Host      string `json:"host"`
 	Method    string `json:"method"`
 	Timestamp string `json:"timestamp"`
@@ -72,13 +75,88 @@ type Request struct {
 	Headers []Header `json:"headers"`
 }
 
+func (r *Request) Raw() []byte {
+	if r == nil {
+		return nil
+	}
+
+	var buf bytes.Buffer
+
+	// Request line: METHOD PATH HTTP/1.1
+	path := r.URL
+	if !strings.HasPrefix(path, "/") {
+		// In case someone stored full URL in URL field
+		if u, err := url.Parse(r.URL); err == nil {
+			path = u.RequestURI()
+		} else {
+			path = "/"
+		}
+	}
+
+	fmt.Fprintf(&buf, "%s %s HTTP/1.1\r\n", r.Method, path)
+
+	// Special headers
+	if r.Host != "" {
+		fmt.Fprintf(&buf, "Host: %s\r\n", r.Host)
+	}
+
+	// Other headers
+	for _, h := range r.Headers {
+		// Skip Host if already written
+		if strings.ToLower(h.Name) == "host" {
+			continue
+		}
+		fmt.Fprintf(&buf, "%s: %s\r\n", h.Name, h.Value)
+	}
+
+	// End of headers
+	buf.WriteString("\r\n")
+
+	// Body
+	if len(r.Body) > 0 {
+		buf.Write(r.Body)
+	}
+
+	return buf.Bytes()
+}
+
 type Response struct {
 	ID string `json:"id"`
 
 	StatusCode int    `json:"status_code"`
-	Body       string `json:"body"`
+	Body       []byte `json:"body"`
 
 	Headers []Header `json:"headers"`
+}
+
+func (resp *Response) Raw() []byte {
+	if resp == nil {
+		return nil
+	}
+
+	var buf bytes.Buffer
+
+	// Status line
+	reason := http.StatusText(resp.StatusCode)
+	if reason == "" {
+		reason = "Unknown Status"
+	}
+	fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", resp.StatusCode, reason)
+
+	// Headers
+	for _, h := range resp.Headers {
+		fmt.Fprintf(&buf, "%s: %s\r\n", h.Name, h.Value)
+	}
+
+	// End of headers
+	buf.WriteString("\r\n")
+
+	// Body
+	if len(resp.Body) > 0 {
+		buf.Write(resp.Body)
+	}
+
+	return buf.Bytes()
 }
 
 type Header struct {

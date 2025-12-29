@@ -52,8 +52,8 @@ func (ms *MultiSplit) PaneLineAdd(o fyne.CanvasObject) {
 	ms.focusedIndex1 = len(ms.objectsGrid) - 1
 	ms.focusedIndex2 = 0
 
-	ms.callOnFocusMove()
 	ms.refreshContainer()
+	ms.callOnFocusMove()
 }
 
 func (ms *MultiSplit) PaneCreate(o fyne.CanvasObject) {
@@ -72,8 +72,8 @@ func (ms *MultiSplit) PaneCreate(o fyne.CanvasObject) {
 	ms.objectsGrid[ms.focusedIndex1] = append(ms.objectsGrid[ms.focusedIndex1], o)
 	ms.focusedIndex2 = len(ms.objectsGrid[ms.focusedIndex1]) - 1
 
-	ms.callOnFocusMove()
 	ms.refreshContainer()
+	ms.callOnFocusMove()
 }
 
 func (ms *MultiSplit) refreshContainer() {
@@ -136,8 +136,8 @@ func (ms *MultiSplit) PaneDelete() {
 		ms.focusedIndex2 = min(ms.focusedIndex2, max(0, len(ms.objectsGrid[ms.focusedIndex1])-1))
 	}
 
-	ms.callOnFocusMove()
 	ms.refreshContainer()
+	ms.callOnFocusMove()
 }
 
 func (ms *MultiSplit) SetCurrentPane(o fyne.CanvasObject) {
@@ -155,8 +155,8 @@ func (ms *MultiSplit) SetCurrentPane(o fyne.CanvasObject) {
 
 	ms.objectsGrid[ms.focusedIndex1][ms.focusedIndex2] = o
 
-	ms.callOnFocusMove()
 	ms.refreshContainer()
+	ms.callOnFocusMove()
 }
 
 func (ms *MultiSplit) PaneFocusUp() {
@@ -167,8 +167,8 @@ func (ms *MultiSplit) PaneFocusUp() {
 		ms.focusedIndex2 = max(ms.focusedIndex2-1, 0)
 	}
 
-	ms.callOnFocusMove()
 	ms.refreshContainer()
+	ms.callOnFocusMove()
 }
 
 func (ms *MultiSplit) callOnFocusMove() {
@@ -189,8 +189,8 @@ func (ms *MultiSplit) PaneFocusDown() {
 		ms.focusedIndex2 = min(ms.focusedIndex2+1, len(ms.objectsGrid[ms.focusedIndex1])-1)
 	}
 
-	ms.callOnFocusMove()
 	ms.refreshContainer()
+	ms.callOnFocusMove()
 }
 
 func (ms *MultiSplit) PaneFocusLeft() {
@@ -201,8 +201,8 @@ func (ms *MultiSplit) PaneFocusLeft() {
 		ms.focusedIndex2 = min(ms.focusedIndex2, len(ms.objectsGrid[ms.focusedIndex1])-1)
 	}
 
-	ms.callOnFocusMove()
 	ms.refreshContainer()
+	ms.callOnFocusMove()
 }
 
 func (ms *MultiSplit) PaneFocusRight() {
@@ -213,8 +213,8 @@ func (ms *MultiSplit) PaneFocusRight() {
 		ms.focusedIndex2 = min(ms.focusedIndex2, len(ms.objectsGrid[ms.focusedIndex1])-1)
 	}
 
-	ms.callOnFocusMove()
 	ms.refreshContainer()
+	ms.callOnFocusMove()
 }
 
 func (ms *MultiSplit) Search(search string, caseSensitive bool) {
