@@ -255,7 +255,7 @@ func (t *Table) MessageHandle(m Message) {
 	}
 
 	switch messageStr {
-	case "table_copy_row":
+	case TableMessageCopyRow:
 		rowStr := strings.Join(t.rows[t.selectedRow], "\t")
 		copyToClipboard(rowStr)
 	}
