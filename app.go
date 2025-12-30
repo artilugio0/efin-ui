@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"image/color"
 	"log"
 	"os"
 	"slices"
@@ -96,6 +97,8 @@ func NewApp(db *sql.DB, histFilePath, settingsScript string) *App {
 }
 
 func (a *App) Run() {
+	a.TabCreate()
+
 	a.loadHistory()
 	a.commandEntry.SetHistory(a.history)
 
@@ -103,8 +106,6 @@ func (a *App) Run() {
 	a.loadKeyBindingsDefinitions()
 
 	a.SetMode(a.mode)
-
-	a.TabCreate()
 
 	a.window.SetFullScreen(true)
 	a.window.Show()
@@ -340,8 +341,7 @@ func (a *App) RunQuery(query string) error {
 		}()
 		wg.Wait()
 
-		reqResViewer := NewRequestResponseViewer()
-		reqResViewer.SetData(req, resp)
+		reqResViewer := NewRequestResponseViewer(req, resp)
 		a.tabs[a.currentTabIndex].PaneCreate(reqResViewer)
 	}
 
@@ -545,6 +545,21 @@ func (a *App) initializeLuaState() {
 		})
 	}
 
+	themeMonocolorFunc := a.l.NewFunction(func(ls *lua.LState) int {
+		r := a.l.ToNumber(1)
+		g := a.l.ToNumber(2)
+		b := a.l.ToNumber(3)
+		variant := a.l.ToString(4)
+
+		a.fyneApp.Settings().SetTheme(MonocolorTheme{
+			ThemeColor: color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255},
+			Variant:    variant,
+		})
+		return 0
+	})
+	a.l.SetGlobal("theme_monocolor", themeMonocolorFunc)
+
+	a.l.SetGlobal("message_send", messageSendFunc)
 	settingsTable := a.l.NewTable()
 	keyBindingsTable := a.l.NewTable()
 	normalModeTable := a.l.NewTable()

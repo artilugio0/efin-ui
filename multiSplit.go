@@ -6,7 +6,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -81,7 +80,9 @@ func (ms *MultiSplit) refreshContainer() {
 	for i, g := range ms.objectsGrid {
 		for j, o := range g {
 			if i == ms.focusedIndex1 && j == ms.focusedIndex2 {
-				o = widgetWithFocusStyle(o)
+				o = ms.widgetWithFocusStyle(o)
+			} else {
+				o = ms.widgetWithUnfocusStyle(o)
 			}
 			objects = append(objects, o)
 		}
@@ -250,42 +251,22 @@ const (
 	LayoutRowColumn
 )
 
-func widgetWithFocusStyle(w fyne.CanvasObject) fyne.CanvasObject {
+func (ms *MultiSplit) widgetWithFocusStyle(w fyne.CanvasObject) fyne.CanvasObject {
 	// Create a rectangle for the background
-	r, g, b, a := theme.DefaultTheme().Color(theme.ColorNameBackground, theme.VariantDark).RGBA()
-
 	backgroundColor := color.NRGBA64{
-		min(uint16(float64(r)*1.5), 0xFFFF),
-		min(uint16(float64(g)*1.5), 0xFFFF),
-		min(uint16(float64(b)*1.7), 0xFFFF),
-		uint16(a),
+		0xFFFF, 0xFFFF, 0xFFFF, 0x0A00,
 	}
 
 	background := canvas.NewRectangle(backgroundColor)
-
-	return container.NewStack(background, container.NewThemeOverride(w, SelectedPaneTheme{backgroundColor}))
+	return container.NewStack(background, w)
 }
 
-type SelectedPaneTheme struct {
-	backgroundColor color.Color
-}
-
-func (t SelectedPaneTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	if name == theme.ColorNameBackground {
-		return t.backgroundColor
+func (ms *MultiSplit) widgetWithUnfocusStyle(w fyne.CanvasObject) fyne.CanvasObject {
+	// Create a rectangle for the background
+	backgroundColor := color.NRGBA64{
+		0x0000, 0x0000, 0x0000, 0x0400,
 	}
 
-	return theme.DefaultTheme().Color(name, variant)
-}
-
-func (t SelectedPaneTheme) Font(style fyne.TextStyle) fyne.Resource {
-	return theme.DefaultTheme().Font(style)
-}
-
-func (t SelectedPaneTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
-	return theme.DefaultTheme().Icon(name)
-}
-
-func (t SelectedPaneTheme) Size(name fyne.ThemeSizeName) float32 {
-	return theme.DefaultTheme().Size(name)
+	background := canvas.NewRectangle(backgroundColor)
+	return container.NewStack(background, w)
 }

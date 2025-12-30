@@ -93,11 +93,11 @@ func (r *Request) Raw() []byte {
 		}
 	}
 
-	fmt.Fprintf(&buf, "%s %s HTTP/1.1\r\n", r.Method, path)
+	fmt.Fprintf(&buf, "%s %s HTTP/1.1\n", r.Method, path)
 
 	// Special headers
 	if r.Host != "" {
-		fmt.Fprintf(&buf, "Host: %s\r\n", r.Host)
+		fmt.Fprintf(&buf, "Host: %s\n", r.Host)
 	}
 
 	// Other headers
@@ -106,11 +106,11 @@ func (r *Request) Raw() []byte {
 		if strings.ToLower(h.Name) == "host" {
 			continue
 		}
-		fmt.Fprintf(&buf, "%s: %s\r\n", h.Name, h.Value)
+		fmt.Fprintf(&buf, "%s: %s\n", h.Name, h.Value)
 	}
 
 	// End of headers
-	buf.WriteString("\r\n")
+	buf.WriteString("\n")
 
 	// Body
 	if len(r.Body) > 0 {
@@ -141,15 +141,15 @@ func (resp *Response) Raw() []byte {
 	if reason == "" {
 		reason = "Unknown Status"
 	}
-	fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", resp.StatusCode, reason)
+	fmt.Fprintf(&buf, "HTTP/1.1 %d %s\n", resp.StatusCode, reason)
 
 	// Headers
 	for _, h := range resp.Headers {
-		fmt.Fprintf(&buf, "%s: %s\r\n", h.Name, h.Value)
+		fmt.Fprintf(&buf, "%s: %s\n", h.Name, h.Value)
 	}
 
 	// End of headers
-	buf.WriteString("\r\n")
+	buf.WriteString("\n")
 
 	// Body
 	if len(resp.Body) > 0 {

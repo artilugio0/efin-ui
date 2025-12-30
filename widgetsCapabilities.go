@@ -32,3 +32,7 @@ type Message = any
 type MessageHandler interface {
 	MessageHandle(Message)
 }
+
+type Themer interface {
+	SetTheme(fyne.Theme, fyne.ThemeVariant)
+}
