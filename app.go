@@ -45,6 +45,8 @@ type App struct {
 	tabs            []*MultiSplit
 	currentTabIndex int
 
+	toastSet *ToastSet
+
 	focusedObject fyne.CanvasObject
 }
 
@@ -82,9 +84,13 @@ func NewApp(db *sql.DB, histFilePath, settingsScript string) *App {
 		widget.NewLabel("placeholder"),
 	)
 
+	toastSet := NewToastSet()
+
+	windowContent := container.NewStack(content, toastSet)
+
 	fyneApp := app.New()
 	window := fyneApp.NewWindow("Efin")
-	window.SetContent(content)
+	window.SetContent(windowContent)
 
 	a.fyneApp = fyneApp
 	a.window = window
@@ -92,6 +98,7 @@ func NewApp(db *sql.DB, histFilePath, settingsScript string) *App {
 	a.modeLabel = modeLabel
 	a.commandEntry = commandEntry
 	a.tabs = tabs
+	a.toastSet = toastSet
 
 	return a
 }
@@ -307,6 +314,14 @@ func (a *App) SearchClear() {
 	}
 }
 
+func (a *App) ToastMessage(message string) {
+	a.toastSet.CreateToastMessage(message)
+}
+
+func (a *App) ToastError(message string) {
+	a.toastSet.CreateToastError(message)
+}
+
 func (a *App) RunQuery(query string) error {
 	result, err := runQuery(a.db, query)
 	if err != nil {
@@ -314,6 +329,8 @@ func (a *App) RunQuery(query string) error {
 	}
 
 	resultsTable := NewTable(result)
+	resultsTable.ShowToastMessageFunc = a.ToastMessage
+
 	resultsTable.OnSubmit = func(row []string) {
 		var wg sync.WaitGroup
 		wg.Add(1)
@@ -323,7 +340,7 @@ func (a *App) RunQuery(query string) error {
 			var err error
 			req, err = getRequest(a.db, row[0])
 			if err != nil {
-				log.Printf("ERROR: %v", err)
+				a.ToastError(fmt.Sprintf("ERROR: %v", err))
 				return
 			}
 		}()
@@ -335,13 +352,15 @@ func (a *App) RunQuery(query string) error {
 			var err error
 			resp, err = getResponse(a.db, row[0])
 			if err != nil {
-				log.Printf("ERROR: %v", err)
+				a.ToastError(fmt.Sprintf("ERROR: %v", err))
 				return
 			}
 		}()
 		wg.Wait()
 
 		reqResViewer := NewRequestResponseViewer(req, resp)
+		reqResViewer.ShowToastMessageFunc = a.ToastMessage
+
 		a.tabs[a.currentTabIndex].PaneCreate(reqResViewer)
 	}
 
@@ -544,6 +563,7 @@ func (a *App) initializeLuaState() {
 			return 0
 		})
 	}
+	a.l.SetGlobal("message_send", messageSendFunc)
 
 	themeMonocolorFunc := a.l.NewFunction(func(ls *lua.LState) int {
 		r := a.l.ToNumber(1)
@@ -559,7 +579,24 @@ func (a *App) initializeLuaState() {
 	})
 	a.l.SetGlobal("theme_monocolor", themeMonocolorFunc)
 
-	a.l.SetGlobal("message_send", messageSendFunc)
+	toastFunc := a.l.NewFunction(func(ls *lua.LState) int {
+		message := a.l.ToString(1)
+
+		a.ToastMessage(message)
+
+		return 0
+	})
+	a.l.SetGlobal("toast", toastFunc)
+
+	toastErrFunc := a.l.NewFunction(func(ls *lua.LState) int {
+		message := a.l.ToString(1)
+
+		a.ToastError(message)
+
+		return 0
+	})
+	a.l.SetGlobal("toast_err", toastErrFunc)
+
 	settingsTable := a.l.NewTable()
 	keyBindingsTable := a.l.NewTable()
 	normalModeTable := a.l.NewTable()
@@ -618,7 +655,7 @@ func (a *App) initializeLuaState() {
 	a.l.SetGlobal("settings", settingsTable)
 
 	if err := a.l.DoString(a.settingsScript); err != nil {
-		log.Printf("ERROR: evaluation of settings script failed: %v", err)
+		a.ToastError(fmt.Sprintf("Evaluation of settings script failed: %v", err))
 	}
 }
 
@@ -628,7 +665,7 @@ func (a *App) executeCode(code string) {
 	if err != nil {
 		f, err = a.l.LoadString(code)
 		if err != nil {
-			log.Printf("ERROR: %v", err)
+			a.ToastError(fmt.Sprintf("ERROR: %v", err))
 		}
 	}
 
@@ -637,7 +674,7 @@ func (a *App) executeCode(code string) {
 		NRet:    0,
 		Protect: true,
 	}); err != nil {
-		log.Printf("ERROR: %v", err)
+		a.ToastError(fmt.Sprintf("ERROR: %v", err))
 	}
 
 	if err == nil {
@@ -788,7 +825,7 @@ func (a *App) executeKeyBinding(kb string) {
 		NRet:    0,
 		Protect: true,
 	}); err != nil {
-		log.Printf("ERROR: key binding failed: %v", err)
+		a.ToastError(fmt.Sprintf("ERROR: %v", err))
 		return
 	}
 }

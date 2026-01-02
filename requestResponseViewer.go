@@ -30,23 +30,14 @@ type RequestResponseViewer struct {
 	leftLinesList  *LinesList
 	rightLinesList *LinesList
 
-	/*
-		leftSearchResults       []int
-		leftSearchResultsIndex  int
-		rightSearchResults      []int
-		rightSearchResultsIndex int
-
-		leftSearchResultsBox  *SearchResultsCountBox
-		rightSearchResultsBox *SearchResultsCountBox
-
-	*/
-
 	keyBindings *KeyBindings
 
 	reqLabel  *widget.Label
 	respLabel *widget.Label
 
 	rightSelected bool
+
+	ShowToastMessageFunc func(string)
 }
 
 // NewRequestResponseViewer creates a new viewer widget
@@ -202,25 +193,40 @@ func (v *RequestResponseViewer) MessageHandle(m Message) {
 		t, err := template.New("make_request").Funcs(funcs).Parse(scriptTpl)
 		if err != nil {
 			log.Printf("could not copy request script: %v", err)
+			return
 		}
 
 		f := &strings.Builder{}
 
 		if err := t.Execute(f, v.request); err != nil {
 			log.Printf("could execute request script template: %v", err)
+			return
 		}
 
 		if err := copyToClipboard(f.String()); err != nil {
 			log.Printf("could not copy request script to clipboard: %v", err)
+			return
+		}
+
+		if v.ShowToastMessageFunc != nil {
+			v.ShowToastMessageFunc("Request script copied to clipboard")
 		}
 
 	case RequestResponseViewerMessageCopyRequest:
 		reqBytes := v.request.Raw()
 		copyToClipboard(string(reqBytes))
 
+		if v.ShowToastMessageFunc != nil {
+			v.ShowToastMessageFunc("Request copied to clipboard")
+		}
+
 	case RequestResponseViewerMessageCopyResponse:
 		respBytes := v.response.Raw()
 		copyToClipboard(string(respBytes))
+
+		if v.ShowToastMessageFunc != nil {
+			v.ShowToastMessageFunc("Response copied to clipboard")
+		}
 	}
 }
 

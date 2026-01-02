@@ -2,7 +2,6 @@ package main
 
 import (
 	"image/color"
-	"log"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
@@ -50,7 +49,6 @@ func (t MonocolorTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVarian
 		return t.ThemeColor
 	}
 
-	log.Printf("MonocolorTheme.Color %s", name)
 	return t.ThemeColor
 }
 

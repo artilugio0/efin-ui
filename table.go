@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -31,6 +32,8 @@ type Table struct {
 	searchResultsBox *SearchResultsCountBox
 
 	keyBindings *KeyBindings
+
+	ShowToastMessageFunc func(string)
 
 	OnSubmit func([]string)
 }
@@ -257,6 +260,14 @@ func (t *Table) MessageHandle(m Message) {
 	switch messageStr {
 	case TableMessageCopyRow:
 		rowStr := strings.Join(t.rows[t.selectedRow], "\t")
-		copyToClipboard(rowStr)
+		err := copyToClipboard(rowStr)
+		if err != nil {
+			log.Printf("could not copy row to clipboard: %v", err)
+			return
+		}
+
+		if t.ShowToastMessageFunc != nil {
+			t.ShowToastMessageFunc("Row copied to clipboard")
+		}
 	}
 }
