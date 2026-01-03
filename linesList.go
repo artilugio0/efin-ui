@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -36,17 +37,17 @@ func NewLinesList(text string) *LinesList {
 		searchResultsBox: NewSearchResultsCountBox(),
 	}
 
-	list := widget.NewList(
+	var list *widget.List
+	list = widget.NewList(
 		func() int { return len(ll.viewLines) },
 		func() fyne.CanvasObject {
-			return widget.NewLabel("")
+			return canvas.NewText("", list.Theme().Color(theme.ColorNameForeground, theme.VariantDark))
 		},
 		func(id widget.ListItemID, obj fyne.CanvasObject) {
-			label := obj.(*widget.Label)
-			label.SetText(ll.viewLines[id])
-			label.TextStyle = fyne.TextStyle{Monospace: true}
-			label.Wrapping = fyne.TextWrapOff
-			label.Selectable = true
+			txt := obj.(*canvas.Text)
+			txt.Text = ll.viewLines[id]
+			txt.Color = list.Theme().Color(theme.ColorNameForeground, theme.VariantDark)
+			txt.Refresh()
 		},
 	)
 	list.HideSeparators = true
