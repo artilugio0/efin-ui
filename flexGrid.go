@@ -1,4 +1,4 @@
-package main
+package efinui
 
 import "fyne.io/fyne/v2"
 
