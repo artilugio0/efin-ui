@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -81,8 +82,6 @@ func (ms *MultiSplit) refreshContainer() {
 		for j, o := range g {
 			if i == ms.focusedIndex1 && j == ms.focusedIndex2 {
 				o = ms.widgetWithFocusStyle(o)
-			} else {
-				o = ms.widgetWithUnfocusStyle(o)
 			}
 			objects = append(objects, o)
 		}
@@ -253,20 +252,25 @@ const (
 
 func (ms *MultiSplit) widgetWithFocusStyle(w fyne.CanvasObject) fyne.CanvasObject {
 	// Create a rectangle for the background
-	backgroundColor := color.NRGBA64{
-		0xFFFF, 0xFFFF, 0xFFFF, 0x0A00,
+	thm := ms.Theme()
+	backgroundColor := thm.Color(ColorNameActiveBackground, theme.VariantDark)
+	if backgroundColor == nil {
+		backgroundColor = color.NRGBA64{
+			0xFFFF, 0xFFFF, 0xFFFF, 0x0A00,
+		}
+	} else {
+		r, g, b, a := backgroundColor.RGBA()
+		if r == 0 && g == 0 && b == 0 && a == 0 {
+			backgroundColor = color.NRGBA64{
+				0xFFFF, 0xFFFF, 0xFFFF, 0x0A00,
+			}
+		}
 	}
 
 	background := canvas.NewRectangle(backgroundColor)
 	return container.NewStack(background, w)
 }
 
-func (ms *MultiSplit) widgetWithUnfocusStyle(w fyne.CanvasObject) fyne.CanvasObject {
-	// Create a rectangle for the background
-	backgroundColor := color.NRGBA64{
-		0x0000, 0x0000, 0x0000, 0x0400,
-	}
-
-	background := canvas.NewRectangle(backgroundColor)
-	return container.NewStack(background, w)
+func (ms *MultiSplit) Refresh() {
+	ms.refreshContainer()
 }
