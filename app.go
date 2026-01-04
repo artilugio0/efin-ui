@@ -47,6 +47,8 @@ type App struct {
 
 	toastSet *ToastSet
 
+	helpDialog *HelpDialog
+
 	focusedObject fyne.CanvasObject
 }
 
@@ -86,7 +88,9 @@ func NewApp(db *sql.DB, histFilePath, settingsScript string) *App {
 
 	toastSet := NewToastSet()
 
-	windowContent := container.NewStack(content, toastSet)
+	helpDialog := NewHelpDialog(map[string]string{})
+
+	windowContent := container.NewStack(content, helpDialog, toastSet)
 
 	fyneApp := app.New()
 	window := fyneApp.NewWindow("Efin")
@@ -99,6 +103,7 @@ func NewApp(db *sql.DB, histFilePath, settingsScript string) *App {
 	a.commandEntry = commandEntry
 	a.tabs = tabs
 	a.toastSet = toastSet
+	a.helpDialog = helpDialog
 
 	return a
 }
@@ -111,6 +116,8 @@ func (a *App) Run() {
 	a.loadKeyBindingsDefinitions()
 
 	a.TabCreate()
+
+	a.helpDialog.Hide()
 
 	a.SetMode(a.mode)
 
@@ -129,6 +136,18 @@ func (a *App) SetMode(mode Mode) {
 	a.applyKeyBindings(mode)
 
 	if mode == ModeNormal {
+		if f, ok := a.focusedObject.(fyne.Focusable); ok {
+			a.window.Canvas().Focus(f)
+		} else {
+			a.window.Canvas().Focus(nil)
+		}
+
+		a.helpDialog.Hide()
+		a.helpDialog.Refresh()
+	} else if mode == ModeHelp {
+		a.helpDialog.Show()
+		a.helpDialog.Refresh()
+
 		if f, ok := a.focusedObject.(fyne.Focusable); ok {
 			a.window.Canvas().Focus(f)
 		} else {
@@ -171,6 +190,46 @@ func (a *App) PaneFocusUp() {
 	a.tabs[a.currentTabIndex].PaneFocusUp()
 }
 
+func (a *App) updateHelpDialog() {
+	log.Printf("updateHelpDialog")
+	settingsTable, ok := a.l.GetGlobal("settings").(*lua.LTable)
+	if !ok {
+		return
+	}
+
+	keyBindingsTable, ok := settingsTable.RawGet(lua.LString("key_bindings")).(*lua.LTable)
+	if !ok {
+		return
+	}
+
+	kbWidget, ok := a.focusedObject.(KeyBinder)
+	if !ok {
+		return
+	}
+
+	kbWidgetTable, ok := keyBindingsTable.RawGet(lua.LString(kbWidget.WidgetName())).(*lua.LTable)
+	if !ok {
+		return
+	}
+
+	keyBindings := map[string]string{}
+	kbWidgetTable.ForEach(func(k lua.LValue, v lua.LValue) {
+		if s, ok := k.(lua.LString); ok {
+			description := "<no description>"
+
+			if t, ok := v.(*lua.LTable); ok {
+				if desc, ok := t.RawGet(lua.LString("desc")).(lua.LString); ok {
+					description = string(desc)
+				}
+			}
+
+			keyBindings[string(s)] = description
+		}
+	})
+
+	a.helpDialog.SetDescriptions(keyBindings)
+}
+
 func (a *App) TabCreate() {
 	tab := NewMultiSplit()
 	tab.OnFocusMove = func(o fyne.CanvasObject) {
@@ -183,6 +242,8 @@ func (a *App) TabCreate() {
 		} else {
 			a.window.Canvas().Focus(nil)
 		}
+
+		a.updateHelpDialog()
 	}
 
 	if a.search != "" {
@@ -391,6 +452,8 @@ func (a *App) initializeLuaState() {
 			mode = ModeCommand
 		case "search":
 			mode = ModeSearch
+		case "help":
+			mode = ModeHelp
 		}
 
 		a.SetMode(mode)
@@ -416,6 +479,12 @@ func (a *App) initializeLuaState() {
 		return 0
 	})
 	a.l.SetGlobal("set_mode_search", setModeSearchFunc)
+
+	setModeHelpFunc := a.l.NewFunction(func(ls *lua.LState) int {
+		a.SetMode(ModeHelp)
+		return 0
+	})
+	a.l.SetGlobal("set_mode_help", setModeHelpFunc)
 
 	queryFunc := a.l.NewFunction(func(ls *lua.LState) int {
 		queryStr := a.l.ToString(1)
@@ -636,6 +705,20 @@ func (a *App) initializeLuaState() {
 			A: uint8((disabledValue & 0xFF)),
 		}
 
+		floatingBackgroundNumber, ok := themeTable.RawGet(lua.LString("floating_background")).(lua.LNumber)
+		if !ok {
+			a.l.ArgError(1, "invalid value in theme table 'floating_background'")
+			return 0
+		}
+
+		floatingBackgroundValue := int(floatingBackgroundNumber)
+		theme.FloatingBackground = color.RGBA{
+			R: uint8((floatingBackgroundValue & 0xFF000000) >> 24),
+			G: uint8((floatingBackgroundValue & 0xFF0000) >> 16),
+			B: uint8((floatingBackgroundValue & 0xFF00) >> 8),
+			A: uint8((floatingBackgroundValue & 0xFF)),
+		}
+
 		foregroundNumber, ok := themeTable.RawGet(lua.LString("foreground")).(lua.LNumber)
 		if !ok {
 			a.l.ArgError(1, "invalid value in theme table 'foreground'")
@@ -815,14 +898,17 @@ func (a *App) initializeLuaState() {
 	normalModeTable := a.l.NewTable()
 	commandModeTable := a.l.NewTable()
 	searchModeTable := a.l.NewTable()
+	helpModeTable := a.l.NewTable()
 
 	a.l.SetField(settingsTable, "key_bindings", keyBindingsTable)
 	a.l.SetField(keyBindingsTable, "normal", normalModeTable)
 	a.l.SetField(keyBindingsTable, "command", commandModeTable)
 	a.l.SetField(keyBindingsTable, "search", searchModeTable)
+	a.l.SetField(keyBindingsTable, "help", helpModeTable)
 
 	a.l.SetField(normalModeTable, "ctrl i", setModeCommandFunc)
 	a.l.SetField(normalModeTable, "ctrl /", setModeSearchFunc)
+	a.l.SetField(normalModeTable, "ctrl q", setModeHelpFunc)
 	a.l.SetField(normalModeTable, "escape", searchClearFunc)
 
 	a.l.SetField(commandModeTable, "escape", setModeNormalFunc)
@@ -831,39 +917,65 @@ func (a *App) initializeLuaState() {
 
 	a.l.SetField(searchModeTable, "escape", setModeNormalFunc)
 
+	a.l.SetField(helpModeTable, "escape", setModeNormalFunc)
+	a.l.SetField(helpModeTable, "ctrl i", setModeCommandFunc)
+	a.l.SetField(helpModeTable, "ctrl /", setModeSearchFunc)
+	a.l.SetField(helpModeTable, "ctrl q", setModeHelpFunc)
+
 	a.l.SetField(normalModeTable, "ctrl d", paneDeleteFunc)
 	a.l.SetField(normalModeTable, "ctrl n", paneCreateFunc)
+	a.l.SetField(helpModeTable, "ctrl d", paneDeleteFunc)
+	a.l.SetField(helpModeTable, "ctrl n", paneCreateFunc)
 
 	a.l.SetField(normalModeTable, "ctrl l", paneFocusRightFunc)
 	a.l.SetField(normalModeTable, "ctrl h", paneFocusLeftFunc)
 	a.l.SetField(normalModeTable, "ctrl k", paneFocusUpFunc)
 	a.l.SetField(normalModeTable, "ctrl j", paneFocusDownFunc)
+	a.l.SetField(helpModeTable, "ctrl l", paneFocusRightFunc)
+	a.l.SetField(helpModeTable, "ctrl h", paneFocusLeftFunc)
+	a.l.SetField(helpModeTable, "ctrl k", paneFocusUpFunc)
+	a.l.SetField(helpModeTable, "ctrl j", paneFocusDownFunc)
 
 	a.l.SetField(normalModeTable, "ctrl shift n", tabCreateFunc)
 	a.l.SetField(normalModeTable, "ctrl shift d", tabDeleteFunc)
 	a.l.SetField(normalModeTable, "ctrl shift h", tabPrevFunc)
 	a.l.SetField(normalModeTable, "ctrl shift l", tabNextFunc)
+	a.l.SetField(helpModeTable, "ctrl shift n", tabCreateFunc)
+	a.l.SetField(helpModeTable, "ctrl shift d", tabDeleteFunc)
+	a.l.SetField(helpModeTable, "ctrl shift h", tabPrevFunc)
+	a.l.SetField(helpModeTable, "ctrl shift l", tabNextFunc)
 
 	a.l.SetField(normalModeTable, "n", searchResultNextFunc)
 	a.l.SetField(normalModeTable, "p", searchResultPrevFunc)
+	a.l.SetField(helpModeTable, "n", searchResultNextFunc)
+	a.l.SetField(helpModeTable, "p", searchResultPrevFunc)
 
 	a.l.SetField(normalModeTable, "h", moveLeftFunc)
 	a.l.SetField(normalModeTable, "l", moveRightFunc)
 	a.l.SetField(normalModeTable, "k", moveUpFunc)
 	a.l.SetField(normalModeTable, "j", moveDownFunc)
+	a.l.SetField(helpModeTable, "h", moveLeftFunc)
+	a.l.SetField(helpModeTable, "l", moveRightFunc)
+	a.l.SetField(helpModeTable, "k", moveUpFunc)
+	a.l.SetField(helpModeTable, "j", moveDownFunc)
 
 	a.l.SetField(normalModeTable, "enter", submitFunc)
 	a.l.SetField(normalModeTable, "return", submitFunc)
+	a.l.SetField(helpModeTable, "enter", submitFunc)
+	a.l.SetField(helpModeTable, "return", submitFunc)
 
 	tableTable := a.l.NewTable()
 	a.l.SetField(keyBindingsTable, "table", tableTable)
-	a.l.SetField(tableTable, "c", messageSend(TableMessageCopyRow))
+	a.l.SetField(tableTable, "c", toDescCallTable(a.l, "Copy row to clipboard", messageSend(TableMessageCopyRow)))
 
 	requestResponseViewerTable := a.l.NewTable()
 	a.l.SetField(keyBindingsTable, "request_response_viewer", requestResponseViewerTable)
-	a.l.SetField(requestResponseViewerTable, "c", messageSend(RequestResponseViewerMessageCopyRequest))
-	a.l.SetField(requestResponseViewerTable, "s", messageSend(RequestResponseViewerMessageCopyRequestScript))
-	a.l.SetField(requestResponseViewerTable, "r", messageSend(RequestResponseViewerMessageCopyResponse))
+	a.l.SetField(requestResponseViewerTable, "c",
+		toDescCallTable(a.l, "Copy request to clipboard", messageSend(RequestResponseViewerMessageCopyRequest)))
+	a.l.SetField(requestResponseViewerTable, "s",
+		toDescCallTable(a.l, "Copy request script to clipboard", messageSend(RequestResponseViewerMessageCopyRequestScript)))
+	a.l.SetField(requestResponseViewerTable, "r",
+		toDescCallTable(a.l, "Copy request response to clipboad", messageSend(RequestResponseViewerMessageCopyResponse)))
 
 	a.l.SetGlobal("settings", settingsTable)
 
@@ -896,6 +1008,7 @@ func (a *App) executeCode(code string) {
 	}
 
 	a.loadKeyBindingsDefinitions()
+	a.updateHelpDialog()
 }
 
 func (a *App) historyAppend(cmd string) error {
@@ -1009,8 +1122,22 @@ func (a *App) executeKeyBinding(kb string) {
 		return
 	}
 
-	kbFunc, ok := kbModeTable.RawGet(lua.LString(kb)).(*lua.LFunction)
-	if !ok {
+	kbCall := kbModeTable.RawGet(lua.LString(kb))
+	var kbFunc *lua.LFunction
+	switch kbCall.Type() {
+	case lua.LTFunction:
+		kbFunc = kbCall.(*lua.LFunction)
+
+	case lua.LTTable:
+		t := kbCall.(*lua.LTable)
+		f, ok := t.RawGet(lua.LString("call")).(*lua.LFunction)
+		if !ok {
+			log.Printf("invalid key binding definition: %s %s", a.mode, kb)
+			return
+		}
+		kbFunc = f
+
+	default:
 		// Check if there is a key binding specific for the widget
 		kbWidget, ok := a.focusedObject.(KeyBinder)
 		if !ok {
@@ -1024,13 +1151,24 @@ func (a *App) executeKeyBinding(kb string) {
 			return
 		}
 
-		kbWidgetFunc, ok := kbModeTable.RawGet(lua.LString(kb)).(*lua.LFunction)
-		if !ok {
+		kbWidgetCall := kbModeTable.RawGet(lua.LString(kb))
+		switch kbWidgetCall.Type() {
+		case lua.LTFunction:
+			kbFunc = kbWidgetCall.(*lua.LFunction)
+
+		case lua.LTTable:
+			t := kbWidgetCall.(*lua.LTable)
+			f, ok := t.RawGet(lua.LString("call")).(*lua.LFunction)
+			if !ok {
+				log.Printf("invalid key binding definition: %s %s", a.mode, kb)
+				return
+			}
+			kbFunc = f
+
+		default:
 			log.Printf("key binding not found: %s %s", a.mode, kb)
 			return
 		}
-
-		kbFunc = kbWidgetFunc
 	}
 
 	if err := a.l.CallByParam(lua.P{
@@ -1045,7 +1183,7 @@ func (a *App) executeKeyBinding(kb string) {
 
 func (a *App) configureCanvasKeyBindings(mode Mode) {
 	// Remove current shortcuts
-	for _, mode := range []Mode{ModeNormal, ModeCommand, ModeSearch} {
+	for _, mode := range []Mode{ModeNormal, ModeCommand, ModeSearch, ModeHelp} {
 		for _, kb := range a.keyBindings[mode.String()] {
 			var mod fyne.KeyModifier
 			keys := strings.Fields(strings.ToLower(kb))
@@ -1139,4 +1277,35 @@ func (a *App) applyKeyBindingsToFocusedObject(mode Mode) {
 			a.executeKeyBinding,
 		))
 	}
+}
+
+func toDescCallTable(l *lua.LState, desc string, f *lua.LFunction) *lua.LTable {
+	descCallableTable := l.NewTable()
+	l.SetField(descCallableTable, "desc", lua.LString(desc))
+	l.SetField(descCallableTable, "call", f)
+
+	mt := l.GetTypeMetatable("desc_callable")
+	if mt == lua.LNil {
+		mt = l.NewTypeMetatable("desc_callable")
+		l.SetGlobal("desc_callable", mt)
+		l.SetField(mt, "__call", l.NewFunction(func(ls *lua.LState) int {
+			self := l.ToTable(1)
+
+			callFunc := self.RawGet(lua.LString("call")).(*lua.LFunction)
+
+			if err := l.CallByParam(lua.P{
+				Fn:      callFunc,
+				NRet:    0,
+				Protect: true,
+			}); err != nil {
+				log.Printf("ERROR: %v", err)
+			}
+
+			return 0
+		}))
+	}
+
+	l.SetMetatable(descCallableTable, mt)
+
+	return descCallableTable
 }

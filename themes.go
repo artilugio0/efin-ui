@@ -8,13 +8,15 @@ import (
 )
 
 const (
-	ColorNameActiveBackground fyne.ThemeColorName = "activeBackground"
+	ColorNameActiveBackground   fyne.ThemeColorName = "activeBackground"
+	ColorNameFloatingBackground fyne.ThemeColorName = "floatingBackground"
 )
 
 type CustomTheme struct {
 	ActiveBackground    color.Color
 	Background          color.Color
 	Disabled            color.Color
+	FloatingBackground  color.Color
 	Foreground          color.Color
 	HeaderBackground    color.Color
 	Hover               color.Color
@@ -39,6 +41,9 @@ func (ct CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 
 	case theme.ColorNameDisabled:
 		return ct.Disabled
+
+	case ColorNameFloatingBackground:
+		return ct.FloatingBackground
 
 	case theme.ColorNameForeground:
 		return ct.Foreground

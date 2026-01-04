@@ -10,6 +10,8 @@ func (m Mode) String() string {
 		return "command"
 	case ModeSearch:
 		return "search"
+	case ModeHelp:
+		return "help"
 	}
 
 	return "unknown"
@@ -19,4 +21,5 @@ const (
 	ModeNormal Mode = iota
 	ModeCommand
 	ModeSearch
+	ModeHelp
 )

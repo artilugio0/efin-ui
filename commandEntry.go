@@ -46,7 +46,7 @@ func NewCommandEntry() *CommandEntry {
 func (ce *CommandEntry) SetMode(mode Mode) {
 	ce.mode = mode
 
-	if mode == ModeNormal {
+	if mode == ModeNormal || mode == ModeHelp {
 		ce.Disable()
 	} else {
 		ce.Enable()
