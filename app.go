@@ -191,7 +191,6 @@ func (a *App) PaneFocusUp() {
 }
 
 func (a *App) updateHelpDialog() {
-	log.Printf("updateHelpDialog")
 	settingsTable, ok := a.l.GetGlobal("settings").(*lua.LTable)
 	if !ok {
 		return
