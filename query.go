@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -177,12 +178,16 @@ func getRequest(db *sql.DB, id string) (*Request, error) {
     WHERE req.request_id = ?
     `
 
-	row := db.QueryRow(query, id)
+	intID, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
+	}
+	row := db.QueryRow(query, intID)
 
 	var req Request
 	var headersJSON string
 
-	err := row.Scan(&req.Timestamp, &req.ID, &req.Method, &req.URL, &req.Body, &headersJSON)
+	err = row.Scan(&req.Timestamp, &req.ID, &req.Method, &req.URL, &req.Body, &headersJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -220,12 +225,16 @@ func getResponse(db *sql.DB, id string) (*Response, error) {
     WHERE resp.response_id = ?
     `
 
-	row := db.QueryRow(query, id)
+	intID, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
+	}
+	row := db.QueryRow(query, intID)
 
 	var resp Response
 	var headersJSON string
 
-	err := row.Scan(
+	err = row.Scan(
 		&resp.ID,
 		&resp.StatusCode,
 		&resp.Body,

@@ -404,7 +404,9 @@ func (a *App) RunQuery(query string) error {
 			var err error
 			req, err = getRequest(a.db, row[0])
 			if err != nil {
-				a.ToastError(fmt.Sprintf("ERROR: %v", err))
+				fyne.Do(func() {
+					a.ToastError(fmt.Sprintf("ERROR: %v", err))
+				})
 				return
 			}
 		}()
@@ -416,7 +418,9 @@ func (a *App) RunQuery(query string) error {
 			var err error
 			resp, err = getResponse(a.db, row[0])
 			if err != nil {
-				a.ToastError(fmt.Sprintf("ERROR: %v", err))
+				fyne.Do(func() {
+					a.ToastError(fmt.Sprintf("ERROR: %v", err))
+				})
 				return
 			}
 		}()
