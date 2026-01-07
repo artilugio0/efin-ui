@@ -17,12 +17,12 @@ const (
 
 // Execute runs the root command.
 func Execute() {
-	if err := NewProxyCmd("efin-ui").Execute(); err != nil {
+	if err := NewUICmd("efin-ui").Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func NewProxyCmd(use string) *cobra.Command {
+func NewUICmd(use string) *cobra.Command {
 	var (
 		dbFile       string
 		settingsFile string
