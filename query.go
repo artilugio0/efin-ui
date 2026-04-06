@@ -11,13 +11,16 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type QueryResult [][]string
 
 // runQuery runs the given query and returns a table with the results
 func runQuery(db *sql.DB, query string) (QueryResult, error) {
-	rows, err := db.QueryContext(context.TODO(), query)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
 		log.Printf("error query: %v", err)
 		return nil, err

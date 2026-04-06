@@ -125,6 +125,7 @@ func (a *App) Run() {
 	a.window.Show()
 	a.window.SetFullScreen(false)
 	a.fyneApp.Run()
+	a.l.Close()
 }
 
 func (a *App) SetMode(mode Mode) {
@@ -397,34 +398,31 @@ func (a *App) RunQuery(query string) error {
 
 	resultsTable.OnSubmit = func(row []string) {
 		var wg sync.WaitGroup
-		wg.Add(1)
 		var req *Request
+		var resp *Response
+		var reqErr, respErr error
+
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			var err error
-			req, err = getRequest(a.db, row[0])
-			if err != nil {
-				fyne.Do(func() {
-					a.ToastError(fmt.Sprintf("ERROR: %v", err))
-				})
-				return
-			}
+			req, reqErr = getRequest(a.db, row[0])
 		}()
 
 		wg.Add(1)
-		var resp *Response
 		go func() {
 			defer wg.Done()
-			var err error
-			resp, err = getResponse(a.db, row[0])
-			if err != nil {
-				fyne.Do(func() {
-					a.ToastError(fmt.Sprintf("ERROR: %v", err))
-				})
-				return
-			}
+			resp, respErr = getResponse(a.db, row[0])
 		}()
 		wg.Wait()
+
+		if reqErr != nil {
+			a.ToastError(fmt.Sprintf("ERROR: %v", reqErr))
+			return
+		}
+		if respErr != nil {
+			a.ToastError(fmt.Sprintf("ERROR: %v", respErr))
+			return
+		}
 
 		reqResViewer := NewRequestResponseViewer(req, resp)
 		reqResViewer.ShowToastMessageFunc = a.ToastMessage
