@@ -160,6 +160,10 @@ func (ms *MultiSplit) SetCurrentPane(o fyne.CanvasObject) {
 }
 
 func (ms *MultiSplit) PaneFocusUp() {
+	if len(ms.objectsGrid) == 0 {
+		return
+	}
+
 	if ms.layout == LayoutRowColumn {
 		ms.focusedIndex1 = max(ms.focusedIndex1-1, 0)
 		ms.focusedIndex2 = min(ms.focusedIndex2, len(ms.objectsGrid[ms.focusedIndex1])-1)
@@ -182,6 +186,10 @@ func (ms *MultiSplit) callOnFocusMove() {
 }
 
 func (ms *MultiSplit) PaneFocusDown() {
+	if len(ms.objectsGrid) == 0 {
+		return
+	}
+
 	if ms.layout == LayoutRowColumn {
 		ms.focusedIndex1 = min(ms.focusedIndex1+1, len(ms.objectsGrid)-1)
 		ms.focusedIndex2 = min(ms.focusedIndex2, len(ms.objectsGrid[ms.focusedIndex1])-1)
@@ -194,6 +202,10 @@ func (ms *MultiSplit) PaneFocusDown() {
 }
 
 func (ms *MultiSplit) PaneFocusLeft() {
+	if len(ms.objectsGrid) == 0 {
+		return
+	}
+
 	if ms.layout == LayoutRowColumn {
 		ms.focusedIndex2 = max(ms.focusedIndex2-1, 0)
 	} else {
@@ -206,6 +218,10 @@ func (ms *MultiSplit) PaneFocusLeft() {
 }
 
 func (ms *MultiSplit) PaneFocusRight() {
+	if len(ms.objectsGrid) == 0 {
+		return
+	}
+
 	if ms.layout == LayoutRowColumn {
 		ms.focusedIndex2 = min(ms.focusedIndex2+1, len(ms.objectsGrid[ms.focusedIndex1])-1)
 	} else {

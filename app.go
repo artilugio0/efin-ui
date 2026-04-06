@@ -994,6 +994,7 @@ func (a *App) executeCode(code string) {
 		f, err = a.l.LoadString(code)
 		if err != nil {
 			a.ToastError(fmt.Sprintf("ERROR: %v", err))
+			return
 		}
 	}
 

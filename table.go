@@ -221,7 +221,7 @@ func (t *Table) updateSelectedRow() {
 }
 
 func (t *Table) Submit() {
-	if t.OnSubmit != nil {
+	if t.OnSubmit != nil && len(t.rows) > t.selectedRow {
 		t.OnSubmit(t.rows[t.selectedRow])
 	}
 }

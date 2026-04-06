@@ -130,9 +130,19 @@ func (v *RequestResponseViewer) SearchNext() {
 }
 
 func (v *RequestResponseViewer) MoveUp() {
+	if v.rightSelected {
+		v.rightLinesList.MoveUp()
+		return
+	}
+	v.leftLinesList.MoveUp()
 }
 
 func (v *RequestResponseViewer) MoveDown() {
+	if v.rightSelected {
+		v.rightLinesList.MoveDown()
+		return
+	}
+	v.leftLinesList.MoveDown()
 }
 
 func (v *RequestResponseViewer) MoveLeft() {

@@ -102,6 +102,10 @@ func (ce *CommandEntry) HistoryNext() {
 }
 
 func (ce *CommandEntry) HistoryPrev() {
+	if len(ce.history) == 0 {
+		return
+	}
+
 	ce.historyPos = max(0, ce.historyPos-1)
 	ce.SetText(ce.history[ce.historyPos])
 	ce.Refresh()

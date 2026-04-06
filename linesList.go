@@ -20,6 +20,8 @@ type LinesList struct {
 	originalLines []string
 	viewLines     []string
 
+	selectedLine int
+
 	search              string
 	searchCaseSensitive bool
 	searchResults       []int
@@ -175,6 +177,26 @@ func (ll *LinesList) SearchNext() {
 
 	ll.searchResultsIndex = (ll.searchResultsIndex + 1) % lenRes
 	ll.updateSearchResultsBox()
+}
+
+func (ll *LinesList) MoveUp() {
+	if len(ll.viewLines) == 0 {
+		return
+	}
+	ll.selectedLine = max(0, ll.selectedLine-1)
+	ll.list.ScrollTo(ll.selectedLine)
+	ll.list.Select(ll.selectedLine)
+	ll.list.Refresh()
+}
+
+func (ll *LinesList) MoveDown() {
+	if len(ll.viewLines) == 0 {
+		return
+	}
+	ll.selectedLine = min(len(ll.viewLines)-1, ll.selectedLine+1)
+	ll.list.ScrollTo(ll.selectedLine)
+	ll.list.Select(ll.selectedLine)
+	ll.list.Refresh()
 }
 
 func (ll *LinesList) updateSearchResultsBox() {
