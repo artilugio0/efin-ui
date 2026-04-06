@@ -156,7 +156,7 @@ func (ll *LinesList) SearchClear() {
 
 	ll.searchResultsBox.Hide()
 	ll.searchResultsBox.Refresh()
-	ll.container.Refresh()
+	ll.list.Refresh()
 }
 
 func (ll *LinesList) SearchPrev() {
