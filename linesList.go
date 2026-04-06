@@ -123,7 +123,7 @@ func wrapLines(original []string, maxChars int) []string {
 }
 
 func (ll *LinesList) Resize(s fyne.Size) {
-	ll.list.Resize(s)
+	ll.BaseWidget.Resize(s)
 	ll.refreshWrappedContent()
 }
 
