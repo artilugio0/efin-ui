@@ -637,7 +637,6 @@ func (a *App) initializeLuaState() {
 			return 0
 		})
 	}
-	a.l.SetGlobal("message_send", messageSendFunc)
 
 	toastFunc := a.l.NewFunction(func(ls *lua.LState) int {
 		message := a.l.ToString(1)
@@ -664,231 +663,55 @@ func (a *App) initializeLuaState() {
 			return 0
 		}
 
-		theme := CustomTheme{}
-
-		activeBackgroundNumber, ok := themeTable.RawGet(lua.LString("active_background")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'active_background'")
+		parseColor := func(key string) (color.RGBA, bool) {
+			n, ok := themeTable.RawGet(lua.LString(key)).(lua.LNumber)
+			if !ok {
+				a.l.ArgError(1, fmt.Sprintf("invalid value in theme table %q", key))
+				return color.RGBA{}, false
+			}
+			v := int(n)
+			return color.RGBA{
+				R: uint8((v & 0xFF000000) >> 24),
+				G: uint8((v & 0xFF0000) >> 16),
+				B: uint8((v & 0xFF00) >> 8),
+				A: uint8(v & 0xFF),
+			}, true
 		}
 
-		activeBackgroundValue := int(activeBackgroundNumber)
-		theme.ActiveBackground = color.RGBA{
-			R: uint8((activeBackgroundValue & 0xFF000000) >> 24),
-			G: uint8((activeBackgroundValue & 0xFF0000) >> 16),
-			B: uint8((activeBackgroundValue & 0xFF00) >> 8),
-			A: uint8((activeBackgroundValue & 0xFF)),
+		keys := []string{
+			"active_background", "background", "disabled", "floating_background",
+			"foreground", "header_background", "hover", "input_background",
+			"input_border", "place_holder", "primary", "scroll_bar",
+			"scroll_bar_background", "selection", "separator", "shadow",
 		}
 
-		backgroundNumber, ok := themeTable.RawGet(lua.LString("background")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'background'")
+		colors := make(map[string]color.RGBA, len(keys))
+		for _, key := range keys {
+			c, ok := parseColor(key)
+			if !ok {
+				return 0
+			}
+			colors[key] = c
 		}
 
-		backgroundValue := int(backgroundNumber)
-		theme.Background = color.RGBA{
-			R: uint8((backgroundValue & 0xFF000000) >> 24),
-			G: uint8((backgroundValue & 0xFF0000) >> 16),
-			B: uint8((backgroundValue & 0xFF00) >> 8),
-			A: uint8((backgroundValue & 0xFF)),
-		}
-
-		disabledNumber, ok := themeTable.RawGet(lua.LString("disabled")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'disabled'")
-			return 0
-		}
-
-		disabledValue := int(disabledNumber)
-		theme.Disabled = color.RGBA{
-			R: uint8((disabledValue & 0xFF000000) >> 24),
-			G: uint8((disabledValue & 0xFF0000) >> 16),
-			B: uint8((disabledValue & 0xFF00) >> 8),
-			A: uint8((disabledValue & 0xFF)),
-		}
-
-		floatingBackgroundNumber, ok := themeTable.RawGet(lua.LString("floating_background")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'floating_background'")
-			return 0
-		}
-
-		floatingBackgroundValue := int(floatingBackgroundNumber)
-		theme.FloatingBackground = color.RGBA{
-			R: uint8((floatingBackgroundValue & 0xFF000000) >> 24),
-			G: uint8((floatingBackgroundValue & 0xFF0000) >> 16),
-			B: uint8((floatingBackgroundValue & 0xFF00) >> 8),
-			A: uint8((floatingBackgroundValue & 0xFF)),
-		}
-
-		foregroundNumber, ok := themeTable.RawGet(lua.LString("foreground")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'foreground'")
-			return 0
-		}
-
-		foregroundValue := int(foregroundNumber)
-		theme.Foreground = color.RGBA{
-			R: uint8((foregroundValue & 0xFF000000) >> 24),
-			G: uint8((foregroundValue & 0xFF0000) >> 16),
-			B: uint8((foregroundValue & 0xFF00) >> 8),
-			A: uint8((foregroundValue & 0xFF)),
-		}
-
-		headerBackgroundNumber, ok := themeTable.RawGet(lua.LString("header_background")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'header_background'")
-			return 0
-		}
-
-		headerBackgroundValue := int(headerBackgroundNumber)
-		theme.HeaderBackground = color.RGBA{
-			R: uint8((headerBackgroundValue & 0xFF000000) >> 24),
-			G: uint8((headerBackgroundValue & 0xFF0000) >> 16),
-			B: uint8((headerBackgroundValue & 0xFF00) >> 8),
-			A: uint8((headerBackgroundValue & 0xFF)),
-		}
-
-		hoverNumber, ok := themeTable.RawGet(lua.LString("hover")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'hover'")
-			return 0
-		}
-
-		hoverValue := int(hoverNumber)
-		theme.Hover = color.RGBA{
-			R: uint8((hoverValue & 0xFF000000) >> 24),
-			G: uint8((hoverValue & 0xFF0000) >> 16),
-			B: uint8((hoverValue & 0xFF00) >> 8),
-			A: uint8((hoverValue & 0xFF)),
-		}
-
-		inputBackgroundNumber, ok := themeTable.RawGet(lua.LString("input_background")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'input_background'")
-			return 0
-		}
-
-		inputBackgroundValue := int(inputBackgroundNumber)
-		theme.InputBackground = color.RGBA{
-			R: uint8((inputBackgroundValue & 0xFF000000) >> 24),
-			G: uint8((inputBackgroundValue & 0xFF0000) >> 16),
-			B: uint8((inputBackgroundValue & 0xFF00) >> 8),
-			A: uint8((inputBackgroundValue & 0xFF)),
-		}
-
-		inputBorderNumber, ok := themeTable.RawGet(lua.LString("input_border")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'input_border'")
-			return 0
-		}
-
-		inputBorderValue := int(inputBorderNumber)
-		theme.InputBorder = color.RGBA{
-			R: uint8((inputBorderValue & 0xFF000000) >> 24),
-			G: uint8((inputBorderValue & 0xFF0000) >> 16),
-			B: uint8((inputBorderValue & 0xFF00) >> 8),
-			A: uint8((inputBorderValue & 0xFF)),
-		}
-
-		placeHolderNumber, ok := themeTable.RawGet(lua.LString("place_holder")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'place_holder'")
-			return 0
-		}
-
-		placeHolderValue := int(placeHolderNumber)
-		theme.PlaceHolder = color.RGBA{
-			R: uint8((placeHolderValue & 0xFF000000) >> 24),
-			G: uint8((placeHolderValue & 0xFF0000) >> 16),
-			B: uint8((placeHolderValue & 0xFF00) >> 8),
-			A: uint8((placeHolderValue & 0xFF)),
-		}
-
-		primaryNumber, ok := themeTable.RawGet(lua.LString("primary")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'primary'")
-			return 0
-		}
-
-		primaryValue := int(primaryNumber)
-		theme.Primary = color.RGBA{
-			R: uint8((primaryValue & 0xFF000000) >> 24),
-			G: uint8((primaryValue & 0xFF0000) >> 16),
-			B: uint8((primaryValue & 0xFF00) >> 8),
-			A: uint8((primaryValue & 0xFF)),
-		}
-
-		scrollBarNumber, ok := themeTable.RawGet(lua.LString("scroll_bar")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'scroll_bar'")
-			return 0
-		}
-
-		scrollBarValue := int(scrollBarNumber)
-		theme.ScrollBar = color.RGBA{
-			R: uint8((scrollBarValue & 0xFF000000) >> 24),
-			G: uint8((scrollBarValue & 0xFF0000) >> 16),
-			B: uint8((scrollBarValue & 0xFF00) >> 8),
-			A: uint8((scrollBarValue & 0xFF)),
-		}
-
-		scrollBarBackgroundNumber, ok := themeTable.RawGet(lua.LString("scroll_bar_background")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'scroll_bar_background'")
-			return 0
-		}
-
-		scrollBarBackgroundValue := int(scrollBarBackgroundNumber)
-		theme.ScrollBarBackground = color.RGBA{
-			R: uint8((scrollBarBackgroundValue & 0xFF000000) >> 24),
-			G: uint8((scrollBarBackgroundValue & 0xFF0000) >> 16),
-			B: uint8((scrollBarBackgroundValue & 0xFF00) >> 8),
-			A: uint8((scrollBarBackgroundValue & 0xFF)),
-		}
-
-		selectionNumber, ok := themeTable.RawGet(lua.LString("selection")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'selection'")
-			return 0
-		}
-
-		selectionValue := int(selectionNumber)
-		theme.Selection = color.RGBA{
-			R: uint8((selectionValue & 0xFF000000) >> 24),
-			G: uint8((selectionValue & 0xFF0000) >> 16),
-			B: uint8((selectionValue & 0xFF00) >> 8),
-			A: uint8((selectionValue & 0xFF)),
-		}
-
-		separatorNumber, ok := themeTable.RawGet(lua.LString("separator")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'separator'")
-			return 0
-		}
-
-		separatorValue := int(separatorNumber)
-		theme.Separator = color.RGBA{
-			R: uint8((separatorValue & 0xFF000000) >> 24),
-			G: uint8((separatorValue & 0xFF0000) >> 16),
-			B: uint8((separatorValue & 0xFF00) >> 8),
-			A: uint8((separatorValue & 0xFF)),
-		}
-
-		shadowNumber, ok := themeTable.RawGet(lua.LString("shadow")).(lua.LNumber)
-		if !ok {
-			a.l.ArgError(1, "invalid value in theme table 'shadow'")
-			return 0
-		}
-
-		shadowValue := int(shadowNumber)
-		theme.Shadow = color.RGBA{
-			R: uint8((shadowValue & 0xFF000000) >> 24),
-			G: uint8((shadowValue & 0xFF0000) >> 16),
-			B: uint8((shadowValue & 0xFF00) >> 8),
-			A: uint8((shadowValue & 0xFF)),
-		}
-
-		a.ThemeSet(theme)
+		a.ThemeSet(CustomTheme{
+			ActiveBackground:    colors["active_background"],
+			Background:          colors["background"],
+			Disabled:            colors["disabled"],
+			FloatingBackground:  colors["floating_background"],
+			Foreground:          colors["foreground"],
+			HeaderBackground:    colors["header_background"],
+			Hover:               colors["hover"],
+			InputBackground:     colors["input_background"],
+			InputBorder:         colors["input_border"],
+			PlaceHolder:         colors["place_holder"],
+			Primary:             colors["primary"],
+			ScrollBar:           colors["scroll_bar"],
+			ScrollBarBackground: colors["scroll_bar_background"],
+			Selection:           colors["selection"],
+			Separator:           colors["separator"],
+			Shadow:              colors["shadow"],
+		})
 
 		return 0
 	})
